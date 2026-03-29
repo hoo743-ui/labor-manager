@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>과제 인건비 관리 시스템</title>
+<title>COSD 사업 관리 시스템</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
@@ -24,7 +24,9 @@
 html{font-size:13px}
 body{font-family:var(--sans);background:var(--bg);color:var(--tx);height:100vh;display:flex;flex-direction:column;overflow:hidden}
 .topbar{display:flex;align-items:center;gap:12px;padding:10px 20px;background:var(--sf);border-bottom:1px solid var(--b);flex-shrink:0}
-.logo{font-size:15px;font-weight:700;letter-spacing:-.5px;white-space:nowrap}.logo em{color:var(--acc);font-style:normal}
+.logo{font-size:15px;font-weight:700;letter-spacing:-.3px;white-space:nowrap;display:flex;align-items:center;gap:8px}
+.logo-badge{background:var(--acc);color:#fff;font-size:10px;font-weight:700;padding:3px 7px;border-radius:4px;letter-spacing:.05em}
+.logo-text{color:var(--tx);font-weight:500;font-size:13px;letter-spacing:-.2px}
 .nav{display:flex;gap:2px;flex:1;justify-content:center}
 .nav-btn{padding:6px 14px;border-radius:6px;border:none;background:none;color:var(--tx2);font-family:var(--sans);font-size:12px;cursor:pointer;transition:all .15s;white-space:nowrap}
 .nav-btn:hover{color:var(--tx);background:var(--sf2)}
@@ -203,25 +205,109 @@ input[type=range]#pop-slider:active::-webkit-slider-thumb{transform:scale(1.2)}
 .pop-role.sel-책임{border-color:var(--pur);color:var(--pur);background:rgba(155,109,250,0.12)}
 .pop-role.sel-공동{border-color:var(--acc);color:var(--acc);background:rgba(79,142,247,0.12)}
 .pop-role.sel-cosd{border-color:var(--grn);color:var(--grn);background:rgba(46,204,135,0.1)}
+
+/* ── AUTH ── */
+#auth-screen{
+  position:fixed;inset:0;z-index:500;
+  background:var(--bg);
+  display:flex;align-items:center;justify-content:center;
+}
+.auth-card{
+  width:380px;background:var(--sf);
+  border:1px solid var(--b2);border-radius:20px;
+  padding:36px 32px;
+}
+.auth-logo{display:flex;align-items:center;gap:10px;margin-bottom:28px;justify-content:center}
+.auth-logo .logo-badge{font-size:13px;padding:5px 10px}
+.auth-logo .logo-text{font-size:16px;font-weight:600}
+.auth-tabs{display:flex;gap:0;margin-bottom:24px;border:1px solid var(--b);border-radius:8px;overflow:hidden}
+.auth-tab{flex:1;padding:8px;border:none;background:none;color:var(--tx2);font-family:var(--sans);font-size:13px;cursor:pointer;transition:all .15s}
+.auth-tab.on{background:var(--acc2);color:#fff;font-weight:500}
+.auth-form{display:flex;flex-direction:column;gap:12px}
+.auth-input-wrap{display:flex;flex-direction:column;gap:4px}
+.auth-label{font-size:11px;color:var(--tx3)}
+.auth-input{background:var(--sf2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:10px 12px;font-size:13px;font-family:var(--sans);outline:none;transition:border-color .15s;width:100%}
+.auth-input:focus{border-color:var(--acc)}
+.auth-btn{padding:11px;border-radius:8px;border:none;background:var(--acc);color:#fff;font-size:13px;font-weight:600;font-family:var(--sans);cursor:pointer;transition:all .15s;width:100%;margin-top:4px}
+.auth-btn:hover{background:var(--acc2)}
+.auth-btn:disabled{opacity:0.5;cursor:not-allowed}
+.auth-msg{font-size:12px;text-align:center;padding:8px;border-radius:6px;margin-top:4px}
+.auth-msg.err{background:var(--red2);color:var(--red);border:1px solid rgba(240,64,96,0.3)}
+.auth-msg.ok{background:var(--grn2);color:var(--grn);border:1px solid rgba(46,204,135,0.3)}
+.auth-divider{height:1px;background:var(--b);margin:4px 0}
+.user-chip{display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:6px;background:var(--sf2);border:1px solid var(--b)}
+.user-avatar{width:22px;height:22px;border-radius:50%;background:var(--acc2);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0}
 </style>
 </head>
 <body>
+
+<!-- 로그인 화면 -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <span class="logo-badge">COSD</span>
+      <span class="logo-text">사업 관리 시스템</span>
+    </div>
+    <div class="auth-tabs">
+      <button class="auth-tab on" id="tab-login" onclick="switchAuthTab('login')">로그인</button>
+      <button class="auth-tab"    id="tab-signup" onclick="switchAuthTab('signup')">회원가입</button>
+    </div>
+    <div class="auth-form">
+      <div class="auth-input-wrap">
+        <div class="auth-label">이메일</div>
+        <input class="auth-input" id="auth-email" type="email" placeholder="example@email.com" onkeydown="if(event.key==='Enter')authSubmit()">
+      </div>
+      <div class="auth-input-wrap">
+        <div class="auth-label">비밀번호</div>
+        <input class="auth-input" id="auth-pw" type="password" placeholder="6자 이상" onkeydown="if(event.key==='Enter')authSubmit()">
+      </div>
+      <div class="auth-input-wrap" id="auth-name-wrap" style="display:none">
+        <div class="auth-label">이름 (선택)</div>
+        <input class="auth-input" id="auth-name" type="text" placeholder="홍길동">
+      </div>
+      <div id="auth-msg" style="display:none"></div>
+      <button class="auth-btn" id="auth-submit-btn" onclick="authSubmit()">로그인</button>
+    </div>
+    <div style="text-align:center;margin-top:16px;font-size:11px;color:var(--tx3)">
+      COSD 사업 관리 시스템
+    </div>
+  </div>
+</div>
+
 <div style="display:flex;flex-direction:column;height:100vh;overflow:hidden">
 <div class="topbar">
-  <div class="logo">과제<em>Lab</em></div>
+  <div class="logo">
+    <span class="logo-badge">COSD</span>
+    <span class="logo-text">사업 관리 시스템</span>
+  </div>
   <nav class="nav">
     <button class="nav-btn on"  onclick="nav('dash')">대시보드</button>
     <button class="nav-btn"     onclick="nav('proj')">과제별 현황</button>
     <button class="nav-btn"     onclick="nav('emp')">직원별 참여율</button>
     <button class="nav-btn"     onclick="nav('salary')">급여 · 잔액</button>
     <button class="nav-btn"     onclick="nav('master')">기준 데이터</button>
+    <button class="nav-btn"     onclick="nav('history')">변경 이력</button>
+    <button class="nav-btn"     onclick="nav('tips')" style="color:var(--amb)">사용 가이드</button>
+    <button class="nav-btn"     onclick="nav('admin')" style="color:var(--red)">관리자</button>
   </nav>
   <div class="top-actions">
+    <div style="display:flex;align-items:center;gap:4px;border:1px solid var(--b2);border-radius:6px;padding:2px 6px;background:var(--sf2)">
+      <button onclick="changeYear(-1)" style="background:none;border:none;color:var(--tx2);cursor:pointer;font-size:14px;padding:0 2px;line-height:1">‹</button>
+      <span id="year-label" style="font-size:12px;font-family:var(--mono);color:var(--tx);min-width:36px;text-align:center">2025</span>
+      <button onclick="changeYear(1)"  style="background:none;border:none;color:var(--tx2);cursor:pointer;font-size:14px;padding:0 2px;line-height:1">›</button>
+    </div>
     <span id="db-status" style="font-size:11px;font-family:var(--mono);color:var(--tx3);white-space:nowrap">🔄 연결 중...</span>
     <button class="btn btn-ghost" style="font-size:11px" onclick="saveToDB()">💾 저장</button>
+    <button class="btn btn-ghost" style="font-size:11px" onclick="printPDF()">🖨 출력</button>
     <button class="btn btn-ghost" onclick="document.getElementById('xu').click()">↑ 불러오기</button>
     <input type="file" id="xu" accept=".xlsx,.xls" style="display:none" onchange="importXL(this)">
     <button class="btn btn-pri" onclick="exportXL()">↓ 내보내기</button>
+    <!-- 로그인 유저 표시 -->
+    <div class="user-chip" id="user-chip" style="display:none">
+      <div class="user-avatar" id="user-avatar">?</div>
+      <span id="user-email-label" style="font-size:11px;color:var(--tx2);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+      <button onclick="signOut()" style="background:none;border:none;color:var(--tx3);cursor:pointer;font-size:11px;padding:0 2px" title="로그아웃">×</button>
+    </div>
   </div>
 </div>
 <div class="body">
@@ -365,6 +451,40 @@ input[type=range]#pop-slider:active::-webkit-slider-thumb{transform:scale(1.2)}
     </div>
   </div>
 </div>
+<div class="overlay" id="feedback-ov">
+  <div class="modal" style="width:440px">
+    <div class="modal-title">의견 보내기</div>
+    <div style="font-size:12px;color:var(--tx3);margin-bottom:14px">불편한 점, 필요한 기능, 오류 등 자유롭게 작성해주세요. 관리자에게 전달됩니다.</div>
+    <div class="form-row"><div class="form-label">구분</div>
+      <select class="form-input" id="fb-type">
+        <option value="bug">🐛 오류/버그 신고</option>
+        <option value="feature">✨ 기능 요청</option>
+        <option value="ui">🎨 화면 개선 의견</option>
+        <option value="etc">💬 기타</option>
+      </select>
+    </div>
+    <div class="form-row"><div class="form-label">내용</div>
+      <textarea class="form-input" id="fb-content" rows="5" placeholder="예: 참여율 입력할 때 이전 달 값이 자동으로 채워지면 좋겠어요." style="resize:vertical;line-height:1.6"></textarea>
+    </div>
+    <div class="form-row"><div class="form-label">이름 (선택)</div>
+      <input class="form-input" id="fb-name" placeholder="홍길동">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeOv('feedback-ov')">취소</button>
+      <button class="btn btn-pri" onclick="submitFeedback()">전송</button>
+    </div>
+  </div>
+</div>
+<div class="overlay" id="assign-ov">
+  <div class="modal" style="width:420px">
+    <div class="modal-title" id="assign-modal-title">직원 배정</div>
+    <div id="assign-modal-body"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeOv('assign-ov')">취소</button>
+      <button class="btn btn-pri" id="assign-modal-save">저장</button>
+    </div>
+  </div>
+</div>
 <div id="toast"></div>
 
 <script>
@@ -373,6 +493,9 @@ function r12(rate,role){return Array.from({length:12},()=>({rate,role}));}
 
 const S={
   view:'dash',selMonth:new Date().getMonth(),selProj:null,selEmp:null,
+  year: new Date().getFullYear(),
+  lockedMonths: {}, // lockedMonths[eid][m] = true
+  history: [],      // [{ts, user, action, detail}]
   employees:[
     {id:'E01',name:'김연구',code:'20201026',rank:'책임연구원',baseSalary:5200000,isCosd:false},
     {id:'E02',name:'이박사',code:'20260126',rank:'선임연구원',baseSalary:4800000,isCosd:false},
@@ -615,9 +738,13 @@ function renderProj(){
 
   <div class="card">
     <div style="font-size:13px;font-weight:600;margin-bottom:4px">참여율 입력 — ${proj.name}</div>
-    <div style="font-size:11px;color:var(--tx3);margin-bottom:12px">최소 ${proj.minRate}% 이상 필요 · 셀 직접 수정 가능 · 노란색=미달, 빨간색=전체100%초과</div>
+    <div style="font-size:11px;color:var(--tx3);margin-bottom:8px">셀 클릭 → 슬라이더 · 🔒=잠금 · ⟳=전체월 복사</div>
+    <div style="margin-bottom:10px;display:flex;gap:6px;flex-wrap:wrap">
+      <button class="btn btn-ghost btn-sm" onclick="openAssignModal('${pid}')">+ 직원 배정</button>
+      <button class="btn btn-ghost btn-sm" onclick="lockAllConfirmed()">🔒 확정월 일괄 잠금</button>
+    </div>
     <div class="tbl-wrap"><table>
-      <thead><tr><th>직원</th><th>역할</th>${MN.map(mn=>`<th class="r">${mn}</th>`).join('')}<th class="r">평균</th></tr></thead>
+      <thead><tr><th>직원</th><th>역할</th>${MN.map((mn,i)=>`<th class="r" style="min-width:64px">${mn}${isLocked(participants[0]?.id,i)?'🔒':''}</th>`).join('')}<th class="r">평균</th><th></th></tr></thead>
       <tbody>
         ${participants.map(emp=>{
           const months=S.participation[emp.id][pid];
@@ -626,14 +753,22 @@ function renderProj(){
           return `<tr>
             <td class="name">${emp.name}</td>
             <td><span class="tag t-${role}">${role==='cosd'?'COSD':role}</span></td>
-            ${months.map((mv,m)=>
-              `<td style="padding:5px 6px">${rateCell(emp.id,pid,m)}</td>`
-            ).join('')}
+            ${months.map((mv,m)=>{
+              const locked=isLocked(emp.id,m);
+              return `<td style="padding:4px 4px;position:relative">
+                ${locked
+                  ? `<span style="display:inline-flex;align-items:center;justify-content:flex-end;width:58px;height:28px;padding:0 7px;border-radius:5px;background:rgba(255,255,255,0.04);border:1px solid var(--b);color:var(--tx3);font-family:var(--mono);font-size:12px">${mv.rate}%</span>`
+                  : rateCell(emp.id,pid,m)
+                }
+                <button onclick="toggleLock('${emp.id}',${m})" style="position:absolute;top:2px;right:2px;background:none;border:none;cursor:pointer;font-size:9px;color:${locked?'var(--amb)':'var(--tx3)'};opacity:${locked?1:0.4}" title="${locked?'잠금 해제':'잠금'}">${locked?'🔒':'🔓'}</button>
+              </td>`;
+            }).join('')}
             <td class="${sCls(avg)}">${avg}%</td>
+            <td><button class="btn btn-ghost btn-sm" onclick="copyRowToAll('${emp.id}','${pid}')" title="${MN[S.selMonth]} 값을 전체 월에 복사">⟳</button></td>
           </tr>`;
         }).join('')}
         <tr style="background:var(--sf2)" id="sum-proj-${pid}"><td colspan="2" style="color:var(--tx3);font-size:11px">월 집행예정</td>
-          ${Array.from({length:12},(_,m)=>{const tot=participants.reduce((s,e)=>s+mExec(e.id,pid,m),0);return`<td class="num" style="color:var(--tx2)">${tot>0?fmt(tot):'-'}</td>`;}).join('')}<td></td></tr>
+          ${Array.from({length:12},(_,m)=>{const tot=participants.reduce((s,e)=>s+mExec(e.id,pid,m),0);return`<td class="num" style="color:var(--tx2)">${tot>0?fmt(tot):'-'}</td>`;}).join('')}<td></td><td></td></tr>
       </tbody>
     </table></div>
   </div>`;
@@ -817,7 +952,8 @@ function renderMaster(){
         <td><span class="${sCls(p)}">${p}%</span></td>
         <td class="ctr">${mv?'<span class="tag t-err">⚠ 미달</span>':'<span class="tag t-ok">충족</span>'}</td>
         <td style="white-space:nowrap">
-          <button class="btn btn-ghost btn-sm" onclick="openProjOv('${proj.id}')">편집</button>
+          <button class="btn btn-ghost btn-sm" onclick="openAssignModal('${proj.id}')">배정</button>
+          <button class="btn btn-ghost btn-sm" style="margin-left:4px" onclick="openProjOv('${proj.id}')">편집</button>
           <button class="btn btn-danger btn-sm" style="margin-left:4px" onclick="delProj('${proj.id}')">삭제</button>
         </td>
       </tr>`;}).join('')}</tbody>
@@ -843,7 +979,7 @@ function nav(v){
   S.view=v;
   if(v==='proj'&&!S.selProj)S.selProj=S.projects[0]?.id;
   if(v==='emp'&&!S.selEmp)S.selEmp=S.employees[0]?.id;
-  document.querySelectorAll('.nav-btn').forEach((b,i)=>b.classList.toggle('on',['dash','proj','emp','salary','master'][i]===v));
+  document.querySelectorAll('.nav-btn').forEach((b,i)=>b.classList.toggle('on',['dash','proj','emp','salary','master','history','tips','admin'][i]===v));
   render();
 }
 function selM(m){S.selMonth=m;render()}
@@ -851,14 +987,22 @@ function selProj(pid){S.selProj=pid;if(S.view!=='proj')nav('proj');else render()
 function selEmp(eid){S.selEmp=eid;if(S.view!=='emp')nav('emp');else render()}
 function render(){
   const el=document.getElementById('main');
-  switch(S.view){case'dash':el.innerHTML=renderDash();break;case'proj':el.innerHTML=renderProj();break;case'emp':el.innerHTML=renderEmp();break;case'salary':el.innerHTML=renderSalary();break;case'master':el.innerHTML=renderMaster();break;}
+  const yl=document.getElementById('year-label');
+  if(yl)yl.textContent=S.year;
+  switch(S.view){case'dash':el.innerHTML=renderDash();break;case'proj':el.innerHTML=renderProj();break;case'emp':el.innerHTML=renderEmp();break;case'salary':el.innerHTML=renderSalary();break;case'master':el.innerHTML=renderMaster();break;case'history':el.innerHTML=renderHistory();break;case'tips':el.innerHTML=renderTips();break;case'admin':el.innerHTML=renderAdmin();break;}
   renderSidebar();
 }
 function updateRate(eid,pid,m,val){
+  if(isLocked(eid,m)){toast('🔒 잠긴 월입니다. 잠금 해제 후 수정하세요');return;}
   const rate=Math.max(0,Math.min(100,parseInt(val)||0));
   if(!S.participation[eid])S.participation[eid]={};
   if(!S.participation[eid][pid])S.participation[eid][pid]=Array.from({length:12},()=>({rate:0,role:'공동'}));
+  const old=S.participation[eid][pid][m].rate;
   S.participation[eid][pid][m].rate=rate;
+  if(old!==rate){
+    const emp=S.employees.find(e=>e.id===eid),proj=S.projects.find(p=>p.id===pid);
+    addHistory('참여율 변경',`${emp?.name} · ${proj?.name} · ${MN[m]}: ${old}% → ${rate}%`);
+  }
   setTimeout(render,80);
 }
 function openOv(id){document.getElementById(id).classList.add('open')}
@@ -1209,6 +1353,485 @@ function applyImport(){
 S.selProj=S.projects[0]?.id;S.selEmp=S.employees[0]?.id;
 
 // ══════════════════════════════════════════════
+// ① 연도 전환
+// ══════════════════════════════════════════════
+function changeYear(dir) {
+  S.year += dir;
+  document.getElementById('year-label').textContent = S.year;
+  addHistory('연도 변경', `${S.year}년으로 전환`);
+  render();
+}
+
+// ══════════════════════════════════════════════
+// ② 참여율 복사 기능
+// ══════════════════════════════════════════════
+function copyRateToAll(eid, pid, fromMonth) {
+  const src = S.participation[eid]?.[pid]?.[fromMonth];
+  if (!src) return;
+  if (!confirm(`${MN[fromMonth]} 참여율(${src.rate}%)을 전체 월에 복사할까요?`)) return;
+  for (let m = 0; m < 12; m++) {
+    if (isLocked(eid, m)) continue;
+    S.participation[eid][pid][m] = { rate: src.rate, role: src.role };
+  }
+  addHistory('참여율 복사', `${S.employees.find(e=>e.id===eid)?.name} · ${S.projects.find(p=>p.id===pid)?.name} · ${MN[fromMonth]} → 전체`);
+  render();
+  toast(`✓ ${MN[fromMonth]} 참여율을 전체 월에 복사했어요`);
+}
+
+function copyRowToAll(eid, pid) {
+  const months = S.participation[eid]?.[pid];
+  if (!months) return;
+  const src = months[S.selMonth];
+  if (!src) return;
+  copyRateToAll(eid, pid, S.selMonth);
+}
+
+// ══════════════════════════════════════════════
+// ③ 참여율 잠금
+// ══════════════════════════════════════════════
+function isLocked(eid, m) {
+  return S.lockedMonths[eid]?.[m] === true;
+}
+function toggleLock(eid, m) {
+  if (!S.lockedMonths[eid]) S.lockedMonths[eid] = {};
+  const wasLocked = S.lockedMonths[eid][m];
+  S.lockedMonths[eid][m] = !wasLocked;
+  const emp = S.employees.find(e=>e.id===eid);
+  addHistory(wasLocked?'잠금 해제':'참여율 잠금', `${emp?.name} ${MN[m]}`);
+  render();
+  toast(`${wasLocked ? '🔓 잠금 해제' : '🔒 잠금'}: ${emp?.name} ${MN[m]}`);
+}
+function lockAllConfirmed() {
+  // 급여 확정된 월 전체 잠금
+  for (const emp of S.employees) {
+    for (let m = 0; m < 12; m++) {
+      if (isCfm(emp.id, m)) {
+        if (!S.lockedMonths[emp.id]) S.lockedMonths[emp.id] = {};
+        S.lockedMonths[emp.id][m] = true;
+      }
+    }
+  }
+  addHistory('일괄 잠금', '급여 확정 월 전체 잠금');
+  render();
+  toast('🔒 급여 확정 월 전체 잠금 완료');
+}
+
+// ══════════════════════════════════════════════
+// ④ 변경 이력
+// ══════════════════════════════════════════════
+function addHistory(action, detail) {
+  S.history.unshift({
+    ts: new Date().toLocaleString('ko-KR'),
+    action, detail
+  });
+  if (S.history.length > 200) S.history = S.history.slice(0, 200);
+}
+
+function renderHistory() {
+  return `
+  <div class="sh"><div>
+    <div class="sh-t">변경 이력</div>
+    <div class="sh-sub">최근 200건 · 세션 기준 (새로고침 시 초기화)</div>
+  </div>
+  <button class="btn btn-ghost btn-sm" onclick="S.history=[];render()">전체 삭제</button>
+  </div>
+  ${S.history.length === 0 ? `<div class="card" style="color:var(--tx3);text-align:center;padding:40px">아직 변경 이력이 없어요</div>` : `
+  <div class="card">
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>시각</th><th>작업</th><th>내용</th></tr></thead>
+      <tbody>
+        ${S.history.map(h=>`<tr>
+          <td style="font-family:var(--mono);font-size:11px;color:var(--tx3)">${h.ts}</td>
+          <td><span class="tag t-gray">${h.action}</span></td>
+          <td style="color:var(--tx2);font-size:12px">${h.detail}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table></div>
+  </div>`}`;
+}
+
+// ══════════════════════════════════════════════
+// ⑤ 과제별 직원 배정 UI
+// ══════════════════════════════════════════════
+function openAssignModal(pid) {
+  const proj = S.projects.find(p=>p.id===pid);
+  const assigned = S.employees.filter(e=>S.participation[e.id]?.[pid]);
+  const unassigned = S.employees.filter(e=>!S.participation[e.id]?.[pid]);
+  const el = document.getElementById('assign-modal-body');
+  document.getElementById('assign-modal-title').textContent = `직원 배정 — ${proj?.name}`;
+  el.innerHTML = `
+    <div style="font-size:12px;color:var(--tx3);margin-bottom:12px">체크하면 해당 과제 참여 연구원으로 추가됩니다.</div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      ${S.employees.map(emp=>{
+        const isAssigned = !!S.participation[emp.id]?.[pid];
+        return `<label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;border:1px solid var(--b);cursor:pointer;background:${isAssigned?'rgba(79,142,247,0.06)':'none'}">
+          <input type="checkbox" data-eid="${emp.id}" ${isAssigned?'checked':''}>
+          <span style="font-size:13px;color:var(--tx)">${emp.name}</span>
+          <span style="font-size:11px;color:var(--tx3)">${emp.rank}</span>
+          ${isAssigned?'<span class="tag t-ok" style="margin-left:auto">배정됨</span>':'<span style="margin-left:auto;font-size:11px;color:var(--tx3)">미배정</span>'}
+        </label>`;
+      }).join('')}
+    </div>`;
+  document.getElementById('assign-modal-save').onclick = () => saveAssign(pid);
+  openOv('assign-ov');
+}
+
+function saveAssign(pid) {
+  const checks = document.querySelectorAll('#assign-modal-body input[type=checkbox]');
+  checks.forEach(cb => {
+    const eid = cb.dataset.eid;
+    const checked = cb.checked;
+    const hasNow = !!S.participation[eid]?.[pid];
+    if (checked && !hasNow) {
+      if (!S.participation[eid]) S.participation[eid] = {};
+      S.participation[eid][pid] = Array.from({length:12}, ()=>({rate:0, role:'공동'}));
+      const emp = S.employees.find(e=>e.id===eid);
+      const proj = S.projects.find(p=>p.id===pid);
+      addHistory('직원 배정', `${emp?.name} → ${proj?.name}`);
+    } else if (!checked && hasNow) {
+      const emp = S.employees.find(e=>e.id===eid);
+      const proj = S.projects.find(p=>p.id===pid);
+      delete S.participation[eid][pid];
+      addHistory('배정 해제', `${emp?.name} ← ${proj?.name}`);
+    }
+  });
+  closeOv('assign-ov');
+  render();
+  toast('✓ 직원 배정 저장됨');
+}
+
+// ══════════════════════════════════════════════
+// ⑥ PDF 출력
+// ══════════════════════════════════════════════
+function printPDF() {
+  const printWin = window.open('', '_blank');
+  const totalB = S.projects.reduce((s,p)=>s+p.budget,0);
+  const totalE = S.projects.reduce((s,p)=>s+projAnn(p.id),0);
+  printWin.document.write(`<!DOCTYPE html><html lang="ko"><head>
+  <meta charset="UTF-8">
+  <title>COSD 사업 인건비 현황 — ${S.year}년</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Noto Sans KR',sans-serif;font-size:12px;color:#111;padding:24px}
+    h1{font-size:16px;font-weight:700;margin-bottom:4px}
+    .sub{font-size:11px;color:#666;margin-bottom:20px}
+    table{width:100%;border-collapse:collapse;margin-bottom:20px}
+    th{background:#f0f0f0;padding:6px 8px;text-align:left;font-weight:600;border:1px solid #ccc;font-size:11px}
+    td{padding:5px 8px;border:1px solid #ddd;font-size:11px}
+    .num{text-align:right;font-family:monospace}
+    .over{color:#c00;font-weight:600}
+    .ok{color:#090}
+    .section{font-size:13px;font-weight:700;margin:16px 0 8px;padding-bottom:4px;border-bottom:2px solid #222}
+    @media print{body{padding:0}}
+  </style></head><body>
+  <h1>COSD 사업 인건비 참여율 현황</h1>
+  <div class="sub">${S.year}년 기준 · 출력일시: ${new Date().toLocaleString('ko-KR')}</div>
+
+  <div class="section">전체 요약</div>
+  <table><thead><tr><th>구분</th><th class="num">금액</th><th class="num">비율</th></tr></thead>
+  <tbody>
+    <tr><td>총 인건비 예산</td><td class="num">${fmt(totalB)}원</td><td class="num">-</td></tr>
+    <tr><td>연간 집행 예정</td><td class="num ${pct(totalE,totalB)>100?'over':'ok'}">${fmt(totalE)}원</td><td class="num ${pct(totalE,totalB)>100?'over':'ok'}">${pct(totalE,totalB)}%</td></tr>
+    <tr><td>잔여 예산</td><td class="num">${fmt(totalB-totalE)}원</td><td class="num">-</td></tr>
+  </tbody></table>
+
+  <div class="section">과제별 인건비 현황</div>
+  <table><thead><tr><th>과제명</th><th>유형</th><th class="num">예산</th><th class="num">집행예정</th><th class="num">잔여</th><th class="num">소진율</th></tr></thead>
+  <tbody>${S.projects.map(proj=>{
+    const exec=projAnn(proj.id), p=pct(exec,proj.budget), rem=proj.budget-exec;
+    return `<tr>
+      <td>${proj.name}</td>
+      <td>${proj.type==='cosd'?'COSD':proj.type==='special'?'특정':'일반'}</td>
+      <td class="num">${fmt(proj.budget)}</td>
+      <td class="num ${p>100?'over':'ok'}">${fmt(exec)}</td>
+      <td class="num">${fmt(rem)}</td>
+      <td class="num ${p>100?'over':p>90?'':'ok'}">${p}%</td>
+    </tr>`;
+  }).join('')}</tbody></table>
+
+  <div class="section">직원별 참여 현황</div>
+  <table><thead><tr><th>직원</th><th>직급</th><th>참여 과제</th><th class="num">최대 유효참여율</th><th>3책</th><th>5공</th><th>상태</th></tr></thead>
+  <tbody>${S.employees.map(emp=>{
+    const mx=Math.max(...Array.from({length:12},(_,m)=>effRate(emp.id,m)));
+    const{chief,joint}=get345(emp.id);
+    const projs=Object.keys(S.participation[emp.id]||{}).map(pid=>S.projects.find(p=>p.id===pid)?.name||pid).join(', ');
+    return `<tr>
+      <td>${emp.name}</td><td>${emp.rank}</td>
+      <td style="max-width:200px">${projs||'-'}</td>
+      <td class="num ${mx>100?'over':''}">${mx}%</td>
+      <td class="num ${chief>3?'over':''}">${chief}/3</td>
+      <td class="num ${joint>5?'over':''}">${joint}/5</td>
+      <td>${chief>3||joint>5||mx>100?'<b style="color:#c00">오류</b>':'정상'}</td>
+    </tr>`;
+  }).join('')}</tbody></table>
+  <script>window.print();<\/script>
+  </body></html>`);
+  printWin.document.close();
+  addHistory('PDF 출력', `${S.year}년 현황 출력`);
+}
+
+// ══════════════════════════════════════════════
+// 사용 가이드 & 피드백
+// ══════════════════════════════════════════════
+function renderTips() {
+  const tips = [
+    {
+      icon: '①',
+      color: 'var(--acc)',
+      title: '처음 시작할 때 — 기준 데이터부터 입력하세요',
+      desc: '상단 <b>기준 데이터</b> 탭에서 직원과 과제를 먼저 등록해야 다른 기능을 쓸 수 있어요.',
+      steps: [
+        '기준 데이터 → <b>+ 직원 추가</b> 버튼으로 직원 등록 (이름, 직급, 기본급 입력)',
+        '기준 데이터 → <b>+ 과제 추가</b> 버튼으로 과제 등록 (과제명, 인건비 예산, 최소참여율 입력)',
+        '과제 목록의 <b>배정</b> 버튼으로 어떤 직원이 이 과제에 참여하는지 체크',
+      ],
+      warn: null,
+    },
+    {
+      icon: '②',
+      color: 'var(--pur)',
+      title: '참여율 입력 — 셀을 클릭하면 슬라이더가 떠요',
+      desc: '<b>과제별 현황</b> 탭에서 참여율 숫자 셀을 클릭하면 슬라이더 팝업이 열립니다.',
+      steps: [
+        '슬라이더를 드래그하거나 아래 빠른 선택 버튼(10%, 20%…)을 누르면 바로 반영',
+        '팝업 아래 <b>상태 패널</b>에서 "이 직원의 이번 달 유효참여율 합계"와 "과제 잔여예산"을 실시간으로 확인 가능',
+        '역할(책임자 / 공동참여 / COSD)도 같은 팝업에서 변경 가능',
+        '오른쪽 <b>⟳ 버튼</b>을 누르면 현재 월 값을 나머지 11개월에 한번에 복사',
+      ],
+      warn: '노란색 셀 = 최소참여율 미달 / 빨간색 셀 = 유효참여율 100% 초과',
+    },
+    {
+      icon: '③',
+      color: 'var(--grn)',
+      title: '100% 규칙 — COSD 사업은 예외예요',
+      desc: '직원 한 명이 여러 과제에 참여할 때 유효참여율 합계가 100%를 넘으면 안 됩니다.',
+      steps: [
+        '유효참여율 = COSD/특정사업 참여율을 <b>제외한</b> 나머지 과제 참여율의 합산',
+        'COSD 사업의 10% 최소 참여율은 100% 한도에 포함되지 않아요',
+        '직원별 참여율 탭 상단의 <b>12개 막대 그래프</b>로 월별 현황을 한눈에 확인 가능',
+      ],
+      warn: '대시보드 상단에 빨간 오류 숫자가 뜨면 초과된 직원이 있다는 뜻이에요',
+    },
+    {
+      icon: '④',
+      color: 'var(--amb)',
+      title: '3책 5공 — 자동으로 카운팅돼요',
+      desc: '한 직원이 책임자로 참여할 수 있는 과제는 최대 3개, 공동참여는 최대 5개입니다.',
+      steps: [
+        '기준 데이터 탭 하단 <b>3책5공 현황 요약</b>에서 직원별 초과 여부 확인',
+        '3책5공에 포함되지 않는 과제(약 10개)는 과제 추가 시 <b>"3책5공 카운팅에 포함" 체크 해제</b>',
+        '사이드바 직원 목록에서도 초과 여부를 색상으로 바로 확인 가능 (빨간색 = 초과)',
+      ],
+      warn: null,
+    },
+    {
+      icon: '⑤',
+      color: 'var(--acc)',
+      title: '급여 입력 — 입력할수록 계산이 정확해져요',
+      desc: '확정 급여를 입력하지 않으면 기본급으로 계산되고, 입력하면 실제 지급액 기준으로 자동 계산됩니다.',
+      steps: [
+        '급여·잔액 탭 → 직원 오른쪽 <b>편집</b> 버튼 → 월별 확정 급여 입력',
+        '입력한 월은 초록색, 미입력 월은 기본급(괄호)으로 표시',
+        '급여를 입력할수록 과제별 <b>"확정 후 잔여 예산"</b>이 더 정확하게 계산됨',
+        '마지막 확정 월 기준으로 "N월 이후 가용 인건비"가 자동 계산되어 표시됨',
+      ],
+      warn: null,
+    },
+    {
+      icon: '⑥',
+      color: 'var(--red)',
+      title: '참여율 잠금 — 확정된 데이터를 실수로 바꾸지 않으려면',
+      desc: '급여가 확정된 월은 잠금을 걸어두면 실수로 참여율을 수정하는 걸 막을 수 있어요.',
+      steps: [
+        '과제별 현황 → 참여율 표 → 각 셀 오른쪽 상단 🔓 아이콘 클릭하면 잠금',
+        '<b>🔒 확정월 일괄 잠금</b> 버튼으로 급여 입력된 월 전체를 한번에 잠글 수 있어요',
+        '잠긴 셀은 수정 불가 (🔒 표시) · 다시 클릭하면 잠금 해제',
+      ],
+      warn: null,
+    },
+    {
+      icon: '⑦',
+      color: 'var(--grn)',
+      title: '데이터 저장 — 자동 저장이지만 수동 저장도 가능해요',
+      desc: '참여율 변경, 직원/과제 추가 등 모든 변경사항은 Supabase에 자동 저장됩니다.',
+      steps: [
+        '상단 상태 표시 → 💾 저장됨 / 🔄 저장 중 / 🔴 오류 로 저장 상태 확인 가능',
+        '상단 <b>💾 저장</b> 버튼으로 수동 저장 가능',
+        '엑셀로 전체 데이터를 백업하고 싶으면 상단 <b>↓ 내보내기</b> 버튼 사용',
+        '다른 기기에서 데이터를 가져오고 싶으면 내보낸 파일을 <b>↑ 불러오기</b>로 업로드',
+      ],
+      warn: null,
+    },
+    {
+      icon: '⑧',
+      color: 'var(--pur)',
+      title: 'PDF 출력 — 보고서 제출용',
+      desc: '현재 연도의 전체 인건비 현황을 A4 형태로 출력할 수 있어요.',
+      steps: [
+        '상단 <b>🖨 출력</b> 버튼 클릭 → 브라우저 인쇄 창이 열림',
+        '전체 요약 + 과제별 예산 현황 + 직원별 참여 현황이 포함됨',
+        'PDF로 저장하려면 인쇄 창에서 <b>PDF로 저장</b> 선택',
+      ],
+      warn: null,
+    },
+  ];
+
+  return `
+  <div class="sh">
+    <div><div class="sh-t">사용 가이드</div><div class="sh-sub">처음 쓰는 분도 바로 이해할 수 있도록 정리했어요</div></div>
+    <button class="btn btn-ghost btn-sm" onclick="openOv('feedback-ov')" style="color:var(--amb)">✉ 의견 보내기</button>
+  </div>
+
+  <div class="alert alert-info mb14">
+    <span>💡</span>
+    <span>순서대로 읽지 않아도 돼요. 궁금한 항목만 골라서 확인하세요. 각 탭을 직접 눌러보면서 따라하면 더 빨리 익숙해져요.</span>
+  </div>
+
+  ${tips.map(tip=>`
+  <div class="card mb14">
+    <div style="display:flex;gap:14px;align-items:flex-start">
+      <div style="width:32px;height:32px;border-radius:8px;background:${tip.color};opacity:0.15;flex-shrink:0;display:flex;align-items:center;justify-content:center;position:relative">
+        <span style="position:absolute;font-size:13px;font-weight:700;color:${tip.color};opacity:1">${tip.icon}</span>
+      </div>
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:600;color:var(--tx);margin-bottom:5px">${tip.title}</div>
+        <div style="font-size:12px;color:var(--tx2);margin-bottom:10px;line-height:1.7">${tip.desc}</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          ${tip.steps.map((s,i)=>`
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <span style="width:18px;height:18px;border-radius:50%;background:rgba(255,255,255,0.06);font-size:10px;color:var(--tx3);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">${i+1}</span>
+            <span style="font-size:12px;color:var(--tx2);line-height:1.7">${s}</span>
+          </div>`).join('')}
+        </div>
+        ${tip.warn?`<div style="margin-top:10px;padding:8px 12px;background:var(--amb2);border-radius:6px;font-size:11px;color:var(--amb)">⚠ ${tip.warn}</div>`:''}
+      </div>
+    </div>
+  </div>`).join('')}
+
+  <div class="card card-acc" style="text-align:center;padding:24px">
+    <div style="font-size:14px;font-weight:600;margin-bottom:8px">불편하거나 필요한 기능이 있으면 알려주세요</div>
+    <div style="font-size:12px;color:var(--tx3);margin-bottom:14px">의견을 보내주시면 다음 업데이트에 반영할게요</div>
+    <button class="btn btn-pri" onclick="openOv('feedback-ov')">✉ 의견 보내기</button>
+  </div>`;
+}
+
+async function submitFeedback() {
+  const type    = document.getElementById('fb-type').value;
+  const content = document.getElementById('fb-content').value.trim();
+  const name    = document.getElementById('fb-name').value.trim() || '익명';
+  if (!content) { toast('⚠ 내용을 입력해주세요'); return; }
+  try {
+    await db.from('feedback').insert([{
+      type, content, name,
+      created_at: new Date().toISOString(),
+    }]);
+    closeOv('feedback-ov');
+    document.getElementById('fb-content').value = '';
+    toast('✓ 의견이 전달됐어요. 감사합니다!');
+    addHistory('의견 전송', `${name}: ${content.slice(0,30)}${content.length>30?'…':''}`);
+  } catch(e) {
+    toast('⚠ 전송 실패: ' + e.message, 4000);
+  }
+}
+
+// ══════════════════════════════════════════════
+// 관리자 대시보드
+// ══════════════════════════════════════════════
+async function renderAdmin() {
+  const el = document.getElementById('main');
+
+  // 로딩 화면 먼저
+  el.innerHTML = `
+  <div class="sh"><div><div class="sh-t">관리자 대시보드</div><div class="sh-sub">사용자 · 피드백 · DB 현황</div></div></div>
+  <div class="card" style="text-align:center;padding:40px;color:var(--tx3)">데이터 불러오는 중...</div>`;
+
+  try {
+    // 사용자 목록 (Auth)
+    const { data: { users }, error: uErr } = await db.auth.admin?.listUsers?.() || { data: { users: [] } };
+
+    // 피드백 목록
+    const { data: feedbacks, error: fErr } = await db.from('feedback').select('*').order('created_at', { ascending: false }).limit(50);
+
+    // DB 테이블 행 수
+    const counts = await Promise.all([
+      db.from('employees').select('*', { count: 'exact', head: true }),
+      db.from('projects').select('*',  { count: 'exact', head: true }),
+      db.from('participation').select('*', { count: 'exact', head: true }),
+      db.from('salary').select('*', { count: 'exact', head: true }),
+      db.from('feedback').select('*', { count: 'exact', head: true }),
+    ]);
+
+    const [empCnt, projCnt, partCnt, salCnt, fbCnt] = counts.map(r => r.count || 0);
+
+    const typeMap: any = { bug: '🐛 오류/버그', feature: '✨ 기능 요청', ui: '🎨 화면 개선', etc: '💬 기타' };
+
+    el.innerHTML = `
+    <div class="sh"><div><div class="sh-t">관리자 대시보드</div><div class="sh-sub">사용자 · 피드백 · DB 현황</div></div>
+      <button class="btn btn-ghost btn-sm" onclick="renderAdmin()">새로고침</button>
+    </div>
+
+    <!-- DB 현황 -->
+    <div class="g4 mb14">
+      <div class="card card-sm"><div class="kpi-label">직원</div><div class="kpi-val">${empCnt}</div><div class="kpi-sub">명 등록</div></div>
+      <div class="card card-sm"><div class="kpi-label">과제</div><div class="kpi-val">${projCnt}</div><div class="kpi-sub">건 등록</div></div>
+      <div class="card card-sm"><div class="kpi-label">참여율</div><div class="kpi-val">${partCnt}</div><div class="kpi-sub">행 저장</div></div>
+      <div class="card card-sm ${fbCnt>0?'card-warn':''}"><div class="kpi-label">피드백</div><div class="kpi-val" style="color:${fbCnt>0?'var(--amb)':'var(--tx)'}">${fbCnt}</div><div class="kpi-sub">건 수신</div></div>
+    </div>
+
+    <!-- 피드백 목록 -->
+    <div class="card mb14">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="font-size:13px;font-weight:600">피드백 목록</div>
+        ${fbCnt>0?`<button class="btn btn-danger btn-sm" onclick="clearFeedback()">전체 삭제</button>`:''}
+      </div>
+      ${!feedbacks || feedbacks.length===0
+        ? `<div style="text-align:center;color:var(--tx3);padding:24px;font-size:12px">아직 피드백이 없어요</div>`
+        : `<div class="tbl-wrap"><table>
+        <thead><tr><th>시각</th><th>구분</th><th>작성자</th><th>내용</th><th></th></tr></thead>
+        <tbody>
+          ${feedbacks.map(f=>`<tr>
+            <td style="font-family:var(--mono);font-size:11px;color:var(--tx3);white-space:nowrap">${new Date(f.created_at).toLocaleString('ko-KR')}</td>
+            <td><span class="tag t-warn">${typeMap[f.type]||f.type}</span></td>
+            <td style="color:var(--tx2);font-size:12px">${f.name||'익명'}</td>
+            <td style="color:var(--tx);font-size:12px;max-width:300px;white-space:normal;line-height:1.5">${f.content}</td>
+            <td><button class="btn btn-danger btn-sm" onclick="deleteFeedback('${f.id}')">삭제</button></td>
+          </tr>`).join('')}
+        </tbody>
+      </table></div>`}
+    </div>
+
+    <!-- 로그인 사용자 현황 -->
+    <div class="card">
+      <div style="font-size:13px;font-weight:600;margin-bottom:12px">가입 사용자</div>
+      <div class="alert alert-info" style="margin-bottom:12px">
+        <span>💡</span><span>사용자 목록은 Supabase 보안 정책상 관리자 API가 필요해요. Supabase → Authentication → Users 에서 확인하세요.</span>
+      </div>
+      <a href="https://supabase.com/dashboard/project/suunsnhegngvjuoguiie/auth/users" target="_blank"
+        style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:6px;background:var(--sf2);border:1px solid var(--b2);color:var(--acc);font-size:12px;text-decoration:none">
+        Supabase 사용자 관리 열기 →
+      </a>
+    </div>`;
+
+  } catch(e) {
+    el.innerHTML = `<div class="card card-err">데이터 불러오기 실패: ${e.message}</div>`;
+  }
+}
+
+async function deleteFeedback(id) {
+  if (!confirm('이 피드백을 삭제할까요?')) return;
+  await db.from('feedback').delete().eq('id', id);
+  renderAdmin();
+  toast('✓ 삭제됐어요');
+}
+
+async function clearFeedback() {
+  if (!confirm('피드백을 전체 삭제할까요?')) return;
+  await db.from('feedback').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  renderAdmin();
+  toast('✓ 전체 삭제됐어요');
+}
+
+// ══════════════════════════════════════════════
 // SUPABASE 연동
 // ══════════════════════════════════════════════
 const SUPA_URL = 'https://suunsnhegngvjuoguiie.supabase.co';
@@ -1441,8 +2064,99 @@ function subscribeRealtime() {
 }
 
 // ── 시작 ──────────────────────────────────────
-loadFromDB();
-subscribeRealtime();
+document.getElementById('year-label').textContent = S.year;
+
+// ── AUTH 로직 ──────────────────────────────────
+let _authMode = 'login';
+
+function switchAuthTab(mode) {
+  _authMode = mode;
+  document.getElementById('tab-login').classList.toggle('on', mode==='login');
+  document.getElementById('tab-signup').classList.toggle('on', mode==='signup');
+  document.getElementById('auth-submit-btn').textContent = mode==='login' ? '로그인' : '회원가입';
+  document.getElementById('auth-name-wrap').style.display = mode==='signup' ? 'flex' : 'none';
+  setAuthMsg('', '');
+}
+
+function setAuthMsg(msg, type) {
+  const el = document.getElementById('auth-msg');
+  if (!msg) { el.style.display='none'; return; }
+  el.style.display = 'block';
+  el.className = 'auth-msg ' + type;
+  el.textContent = msg;
+}
+
+async function authSubmit() {
+  const email = document.getElementById('auth-email').value.trim();
+  const pw    = document.getElementById('auth-pw').value;
+  const btn   = document.getElementById('auth-submit-btn');
+  if (!email || !pw) { setAuthMsg('이메일과 비밀번호를 입력해주세요', 'err'); return; }
+  if (pw.length < 6) { setAuthMsg('비밀번호는 6자 이상이어야 해요', 'err'); return; }
+  btn.disabled = true;
+  btn.textContent = '처리 중...';
+  try {
+    if (_authMode === 'login') {
+      const { error } = await db.auth.signInWithPassword({ email, password: pw });
+      if (error) throw error;
+    } else {
+      const name = document.getElementById('auth-name').value.trim();
+      const { error } = await db.auth.signUp({
+        email, password: pw,
+        options: { data: { name: name || email.split('@')[0] } }
+      });
+      if (error) throw error;
+      setAuthMsg('가입이 완료됐어요! 이메일 인증 후 로그인하세요.', 'ok');
+      btn.disabled = false; btn.textContent = '회원가입';
+      return;
+    }
+  } catch(e) {
+    const msg = e.message.includes('Invalid login') ? '이메일 또는 비밀번호가 틀렸어요'
+      : e.message.includes('already registered') ? '이미 가입된 이메일이에요'
+      : e.message;
+    setAuthMsg(msg, 'err');
+    btn.disabled = false;
+    btn.textContent = _authMode==='login' ? '로그인' : '회원가입';
+  }
+}
+
+async function signOut() {
+  await db.auth.signOut();
+  document.getElementById('auth-screen').style.display = 'flex';
+  document.getElementById('user-chip').style.display = 'none';
+  toast('로그아웃됐어요');
+}
+
+function showUserChip(user) {
+  const email = user.email || '';
+  const name  = user.user_metadata?.name || email.split('@')[0];
+  const initials = name.slice(0,2).toUpperCase();
+  document.getElementById('user-avatar').textContent = initials;
+  document.getElementById('user-email-label').textContent = name;
+  document.getElementById('user-chip').style.display = 'flex';
+}
+
+// Auth 상태 감지 → 로그인 여부에 따라 화면 전환
+db.auth.onAuthStateChange((event, session) => {
+  if (session?.user) {
+    document.getElementById('auth-screen').style.display = 'none';
+    showUserChip(session.user);
+    addHistory('로그인', session.user.email);
+    loadFromDB();
+    subscribeRealtime();
+  } else {
+    document.getElementById('auth-screen').style.display = 'flex';
+    document.getElementById('user-chip').style.display = 'none';
+  }
+});
+
+// 초기 세션 확인 (새로고침 시 자동 로그인 유지)
+(async () => {
+  const { data: { session } } = await db.auth.getSession();
+  if (!session) {
+    // 로그인 화면 유지
+    render(); // 빈 앱 화면은 뒤에 숨김
+  }
+})();
 </script>
 </body>
 </html>
