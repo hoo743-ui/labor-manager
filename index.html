@@ -5,8 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>COSD 사업 관리 시스템</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
 :root{
   --bg:#0f1117;--sf:#181c27;--sf2:#1e2334;--sf3:#242840;
@@ -493,9 +491,9 @@ input[type=range]#pop-slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
 
 <!-- JS 모듈 (순서 중요) -->
 
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script>
-
-// ===== config.js =====
 // ── CONFIG ──────────────────────────────────────
 const SUPA_URL = 'https://suunsnhegngvjuoguiie.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1dW5zbmhlZ25ndmp1b2d1aWllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3NzE5OTMsImV4cCI6MjA5MDM0Nzk5M30.fPXAQm1897s5FgrM7bri6ugZ1BCHWmOlSTEyyxhfCMU';
@@ -580,8 +578,6 @@ function addHistory(action, detail) {
   if (S.history.length > 200) S.history = S.history.slice(0, 200);
 }
 
-
-// ===== computed.js =====
 // ── COMPUTED ────────────────────────────────────
 function yPart() {
   if (!S.participation[S.year]) S.participation[S.year] = {};
@@ -696,8 +692,6 @@ function getOnboardStatus() {
   };
 }
 
-
-// ===== views.js =====
 // ── SIDEBAR ──
 function renderSidebar(){
   const eEl=document.getElementById('sb-emps'),pEl=document.getElementById('sb-projs');
@@ -1104,8 +1098,6 @@ function renderMaster(){
 }
 
 
-
-// ===== actions.js =====
 // ── ACTIONS ────────────────────────────────────
 
 function nav(v) {
@@ -1341,8 +1333,6 @@ function exportXL() {
   toast('✓ 엑셀 내보내기 완료');
 }
 
-
-// ===== popover.js =====
 // ── RATE CELL RENDERER ──────────────────────────────
 function rateCell(eid, pid, m) {
   const rate = getRate(eid, pid, m);
@@ -1577,8 +1567,6 @@ S.selProj=S.projects[0]?.id;S.selEmp=S.employees[0]?.id;
 // ① 연도 전환
 // ══════════════════════════════════════════════
 
-
-// ===== features.js =====
 function changeYear(dir) {
   S.year += dir;
   document.getElementById('year-label').textContent = S.year;
@@ -2055,8 +2043,6 @@ async function clearFeedback() {
   toast('✓ 전체 삭제됐어요');
 }
 
-
-// ===== db.js =====
 // ── DB LAYER ────────────────────────────────────
 
 async function loadFromDB() {
@@ -2242,8 +2228,6 @@ function subscribeRealtime() {
     .subscribe();
 }
 
-
-// ===== auth.js =====
 // ── AUTH ────────────────────────────────────────
 let _authMode = 'login';
 
@@ -2338,44 +2322,57 @@ function updateAdminNavVisibility() {
 }
 
 // Auth 상태 감지
-let _realtimeSubscribed = false;
 db.auth.onAuthStateChange(async (event, session) => {
   if (session?.user) {
     S.currentUser = session.user;
     document.getElementById('auth-screen').style.display = 'none';
     showUserChip(session.user);
+
+    // 관리자 확인
     const { data } = await db.from('admins').select('email').eq('email', session.user.email).maybeSingle();
     S.isAdmin = !!data;
     updateAdminNavVisibility();
-    addHistory('로그인', session.user.email);
-    await loadFromDB();
-    if (!_realtimeSubscribed) { subscribeRealtime(); _realtimeSubscribed = true; }
+
+    if (event === 'SIGNED_IN') {
+      addHistory('로그인', session.user.email);
+      await loadFromDB();
+      subscribeRealtime();
+    }
   } else {
     document.getElementById('auth-screen').style.display = 'flex';
     document.getElementById('user-chip').style.display = 'none';
     S.currentUser = null;
     S.isAdmin = false;
-    _realtimeSubscribed = false;
     updateAdminNavVisibility();
   }
 });
 
-// 초기 세션 확인 (새로고침 시 자동 로그인 유지)
+// 초기 세션 확인
 (async () => {
   const { data: { session } } = await db.auth.getSession();
-  if (!session) render();
+  if (!session) {
+    render(); // 빈 배경만
+  }
 })();
 
 
-// 인증 버튼 이벤트 연결 + 앱 초기화
-document.getElementById('auth-submit-btn').addEventListener('click', authSubmit);
-document.getElementById('tab-login').addEventListener('click',  () => switchAuthTab('login'));
-document.getElementById('tab-signup').addEventListener('click', () => switchAuthTab('signup'));
-document.getElementById('auth-email').addEventListener('keydown', e => { if (e.key === 'Enter') authSubmit(); });
-document.getElementById('auth-pw').addEventListener('keydown',    e => { if (e.key === 'Enter') authSubmit(); });
+// 인증 버튼 이벤트 연결
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('auth-submit-btn').addEventListener('click', authSubmit);
+  document.getElementById('tab-login').addEventListener('click',  () => switchAuthTab('login'));
+  document.getElementById('tab-signup').addEventListener('click', () => switchAuthTab('signup'));
+  document.getElementById('auth-email').addEventListener('keydown', e => { if (e.key === 'Enter') authSubmit(); });
+  document.getElementById('auth-pw').addEventListener('keydown',    e => { if (e.key === 'Enter') authSubmit(); });
 
-document.getElementById('year-label').textContent = S.year;
-render();
+  // 초기 연도 표시
+  document.getElementById('year-label').textContent = S.year;
+
+  // URL 해시로 탭 복원
+  const hash = location.hash.replace('#','');
+  if (['dash','proj','emp','salary','master','history','tips'].includes(hash)) S.view = hash;
+
+  render();
+});
 </script>
 </body>
 </html>
