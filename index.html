@@ -233,8 +233,6 @@ input[type=range]#pop-slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
 .onboard-step.done .onboard-num{background:var(--grn)}
 
 </style>
-
-
 </head>
 <body>
 
@@ -492,14 +490,6 @@ input[type=range]#pop-slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
 <div id="toast"></div>
 
 <!-- JS 모듈 (순서 중요) -->
-
-
-
-
-
-
-
-
 
 <script>
 
@@ -1579,7 +1569,7 @@ document.addEventListener('click', e => {
 });
 
 // ── EXCEL ──────────────────────────────────────────
-let _pImport=null;
+
 function exportXL(){
   const wb=XLSX.utils.book_new();
   const wsE=XLSX.utils.aoa_to_sheet([['직원ID','사원코드','이름','직급','기본급(월)','COSD여부'],...S.employees.map(e=>[e.id,e.code||'',e.name,e.rank,e.baseSalary,e.isCosd?'Y':'N'])]);
@@ -2456,3 +2446,11 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
