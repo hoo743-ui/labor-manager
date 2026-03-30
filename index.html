@@ -225,6 +225,37 @@ input[type=range]#pop-slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
 .mb14{margin-bottom:14px}
 #toast{position:fixed;bottom:22px;right:22px;background:var(--sf2);border:1px solid var(--b2);color:var(--tx);font-size:12px;padding:9px 16px;border-radius:8px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:200}
 
+/* ── 참여율 일괄 입력 ── */
+.bulk-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.bulk-item{display:flex;flex-direction:column;gap:4px}
+.bulk-label{font-size:10px;color:var(--tx3)}
+.bulk-input{background:var(--sf2);border:1px solid var(--b);color:var(--tx);border-radius:6px;padding:6px 8px;font-size:13px;font-family:var(--mono);outline:none;width:100%;text-align:center}
+.bulk-input:focus{border-color:var(--acc)}
+
+/* ── 모바일 최적화 ── */
+@media (max-width:768px){
+  .topbar{padding:8px 12px;gap:8px;flex-wrap:wrap}
+  .logo-text{display:none}
+  .nav{gap:0;overflow-x:auto;justify-content:flex-start;flex:none;width:100%;order:3;padding-bottom:4px}
+  .nav-btn{padding:5px 10px;font-size:11px;white-space:nowrap}
+  .top-actions{gap:4px;flex-wrap:wrap}
+  .top-actions .btn{padding:4px 8px;font-size:11px}
+  #user-chip span{display:none}
+  .body{flex-direction:column}
+  .sidebar{width:100%;height:auto;max-height:120px;border-right:none;border-bottom:1px solid var(--b);flex-direction:row;display:flex;overflow-x:auto}
+  .sb-section{padding:8px 0;min-width:140px}
+  .sb-div{display:none}
+  .main{padding:12px}
+  .g4{grid-template-columns:repeat(2,1fr)}
+  .g2{grid-template-columns:1fr}
+  .modal{width:calc(100vw - 32px)!important;margin:0 16px}
+  .tbl-wrap{font-size:11px}
+  .rate-cell{width:46px;height:24px;font-size:11px}
+  .kpi-val{font-size:18px}
+  #rate-pop{width:calc(100vw - 32px);left:16px!important}
+  .top-actions > div:first-child{display:none}
+}
+
 /* ── ONBOARDING ── */
 .onboard-step{display:flex;gap:14px;align-items:flex-start;padding:14px;border:1px solid var(--b);border-radius:var(--r);margin-bottom:8px;cursor:pointer;transition:all .15s}
 .onboard-step:hover{border-color:var(--b2);background:var(--sf2)}
@@ -483,6 +514,20 @@ input[type=range]#pop-slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeOv('assign-ov')">취소</button>
       <button class="btn btn-pri"   id="assign-modal-save">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 참여율 일괄 입력 모달 -->
+<div class="overlay" id="bulk-ov">
+  <div class="modal" style="width:520px">
+    <div class="modal-title" id="bulk-ov-title">참여율 일괄 입력</div>
+    <div style="font-size:12px;color:var(--tx3);margin-bottom:14px">월별로 참여율을 한번에 입력하세요. 비워두면 현재 값이 유지됩니다.</div>
+    <div id="bulk-ov-body"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeOv('bulk-ov')">취소</button>
+      <button class="btn btn-ghost" onclick="bulkFill()" style="color:var(--acc)">전체 동일하게</button>
+      <button class="btn btn-pri"   onclick="saveBulk()">저장</button>
     </div>
   </div>
 </div>
@@ -873,6 +918,7 @@ function renderProj(){
     <div style="margin-bottom:10px;display:flex;gap:6px;flex-wrap:wrap">
       <button class="btn btn-ghost btn-sm" onclick="openAssignModal('${pid}')">+ 직원 배정</button>
       <button class="btn btn-ghost btn-sm" onclick="lockAllConfirmed()">🔒 확정월 일괄 잠금</button>
+      <button class="btn btn-ghost btn-sm" onclick="openBulkModal('${pid}')" style="color:var(--pur)">📋 일괄 입력</button>
     </div>
     <div class="tbl-wrap"><table>
       <thead><tr><th>직원</th><th>역할</th>${MN.map((mn,i)=>`<th class="r" style="min-width:64px">${mn}${isLocked(participants[0]?.id,i)?'🔒':''}</th>`).join('')}<th class="r">평균</th><th></th></tr></thead>
@@ -1933,6 +1979,79 @@ function renderTips() {
     <div style="font-size:12px;color:var(--tx3);margin-bottom:14px">의견을 보내주시면 다음 업데이트에 반영할게요</div>
     <button class="btn btn-pri" onclick="openOv('feedback-ov')">✉ 의견 보내기</button>
   </div>`;
+}
+
+// ── 참여율 일괄 입력 ──────────────────────────
+let _bulkPid = null;
+
+function openBulkModal(pid) {
+  _bulkPid = pid;
+  const proj = S.projects.find(p => p.id === pid);
+  const participants = S.employees.filter(e => yPart()[e.id]?.[pid]);
+  document.getElementById('bulk-ov-title').textContent = `참여율 일괄 입력 — ${proj?.name}`;
+  document.getElementById('bulk-ov-body').innerHTML = participants.map(emp => {
+    const months = yPart()[emp.id][pid];
+    return `
+    <div style="margin-bottom:16px">
+      <div style="font-size:12px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:8px">
+        ${emp.name}
+        <span class="tag t-${months[0]?.role||'공동'}">${months[0]?.role==='cosd'?'COSD':months[0]?.role||'공동'}</span>
+      </div>
+      <div class="bulk-grid">
+        ${MN.map((mn, m) => {
+          const locked = isLocked(emp.id, m);
+          return `<div class="bulk-item">
+            <div class="bulk-label">${mn}${locked ? ' 🔒' : ''}</div>
+            <input class="bulk-input" id="bulk-${emp.id}-${m}" type="number" min="0" max="100"
+              value="${months[m]?.rate || 0}" ${locked ? 'disabled style="opacity:0.4"' : ''}>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }).join('') || '<div style="color:var(--tx3);text-align:center;padding:20px">배정된 직원이 없어요</div>';
+  openOv('bulk-ov');
+}
+
+function bulkFill() {
+  // 첫 번째 입력값으로 전체 채우기
+  const pid = _bulkPid;
+  const participants = S.employees.filter(e => yPart()[e.id]?.[pid]);
+  participants.forEach(emp => {
+    const firstVal = document.getElementById(`bulk-${emp.id}-0`)?.value;
+    if (!firstVal) return;
+    MN.forEach((_, m) => {
+      const el = document.getElementById(`bulk-${emp.id}-${m}`);
+      if (el && !el.disabled) el.value = firstVal;
+    });
+  });
+}
+
+async function saveBulk() {
+  const pid = _bulkPid;
+  const participants = S.employees.filter(e => yPart()[e.id]?.[pid]);
+  let changed = 0;
+  participants.forEach(emp => {
+    MN.forEach((_, m) => {
+      if (isLocked(emp.id, m)) return;
+      const el = document.getElementById(`bulk-${emp.id}-${m}`);
+      if (!el) return;
+      const rate = clamp(parseInt(el.value) || 0, 0, 100);
+      const old = yPart()[emp.id][pid][m].rate;
+      if (rate !== old) {
+        yPart()[emp.id][pid][m].rate = rate;
+        changed++;
+      }
+    });
+  });
+  if (changed > 0) {
+    addHistory('참여율 일괄 입력', `${S.projects.find(p=>p.id===pid)?.name} · ${changed}개 변경`);
+    await saveToDB();
+    render();
+    toast(`✓ ${changed}개 참여율 저장됐어요`);
+  } else {
+    toast('변경된 값이 없어요');
+  }
+  closeOv('bulk-ov');
 }
 
 async function submitFeedback() {
