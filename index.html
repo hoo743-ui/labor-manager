@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>COSD 사업 관리 시스템</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
 :root{
   --bg:#0f1117;--sf:#181c27;--sf2:#1e2334;--sf3:#242840;
@@ -1568,62 +1570,6 @@ document.addEventListener('click', e => {
   if (POP.open && !pop.contains(e.target) && !e.target.closest('.rate-cell')) closePop();
 });
 
-// ── EXCEL ──────────────────────────────────────────
-
-function exportXL(){
-  const wb=XLSX.utils.book_new();
-  const wsE=XLSX.utils.aoa_to_sheet([['직원ID','사원코드','이름','직급','기본급(월)','COSD여부'],...S.employees.map(e=>[e.id,e.code||'',e.name,e.rank,e.baseSalary,e.isCosd?'Y':'N'])]);
-  wsE['!cols']=[{wch:8},{wch:12},{wch:10},{wch:12},{wch:12},{wch:8}];
-  XLSX.utils.book_append_sheet(wb,wsE,'직원마스터');
-  const wsP=XLSX.utils.aoa_to_sheet([['과제ID','과제명','유형','인건비예산(원)','3책5공포함','최소참여율%'],...S.projects.map(p=>[p.id,p.name,p.type,p.budget,p.include345?'Y':'N',p.minRate])]);
-  wsP['!cols']=[{wch:8},{wch:22},{wch:10},{wch:16},{wch:10},{wch:10}];
-  XLSX.utils.book_append_sheet(wb,wsP,'과제마스터');
-  const rRows=[['직원ID','직원이름','과제ID','과제명','역할',...MN.map(m=>m+'%')]];
-  for(const eid of Object.keys(yPart())){const emp=S.employees.find(e=>e.id===eid);for(const pid of Object.keys(yPart()[eid])){const proj=S.projects.find(p=>p.id===pid),months=yPart()[eid][pid];rRows.push([eid,emp?.name||'',pid,proj?.name||'',months[0]?.role||'공동',...months.map(m=>m.rate)]);}}
-  const wsR=XLSX.utils.aoa_to_sheet(rRows);wsR['!cols']=[{wch:8},{wch:10},{wch:8},{wch:20},{wch:8},...Array(12).fill({wch:6})];
-  XLSX.utils.book_append_sheet(wb,wsR,'참여율');
-  const wsS=XLSX.utils.aoa_to_sheet([['직원ID','직원이름',...MN],...S.employees.map(e=>[e.id,e.name,...(S.salary[e.id]||Array(12).fill(null)).map(v=>v??'')])]);
-  wsS['!cols']=[{wch:8},{wch:10},...Array(12).fill({wch:12})];
-  XLSX.utils.book_append_sheet(wb,wsS,'급여실적');
-  XLSX.writeFile(wb,'과제인건비_'+new Date().toISOString().slice(0,10)+'.xlsx');
-  toast('✓ 엑셀 다운로드 완료');
-}
-function importXL(input){
-  const file=input.files[0];if(!file)return;input.value='';
-  const reader=new FileReader();
-  reader.onload=e=>{try{const wb=XLSX.read(e.target.result,{type:'array'});const{data,msgs}=parseWB(wb);_pImport=data;document.getElementById('import-result').innerHTML=msgs.join('<br>');openOv('import-ov');}catch(err){toast('⚠ 파일 오류: '+err.message,4000)}};
-  reader.readAsArrayBuffer(file);
-}
-function parseWB(wb){
-  const data={employees:[],projects:[],participation:{},salary:{}},msgs=[];
-  const g20s=wb.SheetNames.find(n=>{const rows=XLSX.utils.sheet_to_json(wb.Sheets[n],{defval:'',header:1});if(!rows[0])return false;const h=rows[0].map(c=>String(c).trim());return h.some(x=>x.includes('G20')||x.includes('사원코드'))&&h.some(x=>x.includes('이름'));});
-  if(g20s){
-    const rows=XLSX.utils.sheet_to_json(wb.Sheets[g20s],{defval:'',header:1});
-    const h=rows[0].map(c=>String(c).trim()),ci=h.findIndex(x=>x.includes('G20')||x.includes('사원코드')),ni=h.findIndex(x=>x.includes('이름'));
-    let added=0;
-    for(let i=1;i<rows.length;i++){const code=String(rows[i][ci]||'').trim(),name=String(rows[i][ni]||'').trim();if(!name||!code)continue;if(S.employees.find(e=>e.code===code)||data.employees.find(e=>e.code===code))continue;data.employees.push({id:autoId([...S.employees,...data.employees],'E'),name,code,rank:'연구원',baseSalary:0,isCosd:false});added++;}
-    msgs.push(`<span style="color:var(--grn)">✓ G20 형식 인식</span>: ${added}명 신규 추가 예정 (직급·기본급은 추가 후 편집 필요)`);
-  }
-  if(!g20s&&wb.SheetNames.includes('직원마스터')){const rows=XLSX.utils.sheet_to_json(wb.Sheets['직원마스터'],{defval:''});for(const r of rows){const id=String(r['직원ID']||'').trim();if(!id)continue;data.employees.push({id,name:String(r['이름']||'').trim(),code:String(r['사원코드']||'').trim(),rank:String(r['직급']||'').trim(),baseSalary:Number(r['기본급(월)']||0),isCosd:String(r['COSD여부']||'').toUpperCase()==='Y'});}msgs.push(`<span style="color:var(--grn)">✓ 직원마스터</span>: ${data.employees.length}명`);}
-  else if(!g20s)msgs.push(`<span style="color:var(--amb)">△ 직원마스터</span> 없음`);
-  if(wb.SheetNames.includes('과제마스터')){const rows=XLSX.utils.sheet_to_json(wb.Sheets['과제마스터'],{defval:''});for(const r of rows){const id=String(r['과제ID']||'').trim();if(!id)continue;data.projects.push({id,name:String(r['과제명']||'').trim(),type:String(r['유형']||'normal').trim().toLowerCase(),budget:Number(r['인건비예산(원)']||0),include345:String(r['3책5공포함']||'').toUpperCase()==='Y',minRate:Number(r['최소참여율%']||10)});}msgs.push(`<span style="color:var(--grn)">✓ 과제마스터</span>: ${data.projects.length}건`);}
-  else msgs.push(`<span style="color:var(--amb)">△ 과제마스터</span> 없음`);
-  if(wb.SheetNames.includes('참여율')){const rows=XLSX.utils.sheet_to_json(wb.Sheets['참여율'],{defval:''});let cnt=0;for(const r of rows){const eid=String(r['직원ID']||'').trim(),pid=String(r['과제ID']||'').trim(),role=String(r['역할']||'공동').trim();if(!eid||!pid)continue;if(!data.participation[eid])data.participation[eid]={};data.participation[eid][pid]=MN.map(mn=>({rate:Number(r[mn+'%']||0),role}));cnt++;}msgs.push(`<span style="color:var(--grn)">✓ 참여율</span>: ${cnt}개 행`);}
-  else msgs.push(`<span style="color:var(--amb)">△ 참여율</span> 없음`);
-  if(wb.SheetNames.includes('급여실적')){const rows=XLSX.utils.sheet_to_json(wb.Sheets['급여실적'],{defval:''});for(const r of rows){const eid=String(r['직원ID']||'').trim();if(!eid)continue;data.salary[eid]=MN.map(mn=>{const v=r[mn];return(v!==''&&v!=null)?Number(v):null;});}msgs.push(`<span style="color:var(--grn)">✓ 급여실적</span>: ${Object.keys(data.salary).length}명`);}
-  else msgs.push(`<span style="color:var(--amb)">△ 급여실적</span> 없음`);
-  return{data,msgs};
-}
-function applyImport(){
-  if(!_pImport)return;const d=_pImport;
-  const isG20=d.employees.length>0&&d.employees.every(e=>e.baseSalary===0);
-  if(isG20){for(const emp of d.employees){if(!S.employees.find(e=>e.id===emp.id||e.code===emp.code)){S.employees.push(emp);S.salary[emp.id]=Array(12).fill(null);}}}
-  else if(d.employees.length>0)S.employees=d.employees;
-  if(d.projects.length>0)S.projects=d.projects;
-  if(Object.keys(d.participation).length>0)S.participation=d.participation;
-  for(const[k,v]of Object.entries(d.salary))S.salary[k]=v;
-  _pImport=null;closeOv('import-ov');render();toast('✓ 데이터 적용 완료');
-}
 
 S.selProj=S.projects[0]?.id;S.selEmp=S.employees[0]?.id;
 
@@ -2392,65 +2338,44 @@ function updateAdminNavVisibility() {
 }
 
 // Auth 상태 감지
+let _realtimeSubscribed = false;
 db.auth.onAuthStateChange(async (event, session) => {
   if (session?.user) {
     S.currentUser = session.user;
     document.getElementById('auth-screen').style.display = 'none';
     showUserChip(session.user);
-
-    // 관리자 확인
     const { data } = await db.from('admins').select('email').eq('email', session.user.email).maybeSingle();
     S.isAdmin = !!data;
     updateAdminNavVisibility();
-
-    if (event === 'SIGNED_IN') {
-      addHistory('로그인', session.user.email);
-      await loadFromDB();
-      subscribeRealtime();
-    }
+    addHistory('로그인', session.user.email);
+    await loadFromDB();
+    if (!_realtimeSubscribed) { subscribeRealtime(); _realtimeSubscribed = true; }
   } else {
     document.getElementById('auth-screen').style.display = 'flex';
     document.getElementById('user-chip').style.display = 'none';
     S.currentUser = null;
     S.isAdmin = false;
+    _realtimeSubscribed = false;
     updateAdminNavVisibility();
   }
 });
 
-// 초기 세션 확인
+// 초기 세션 확인 (새로고침 시 자동 로그인 유지)
 (async () => {
   const { data: { session } } = await db.auth.getSession();
-  if (!session) {
-    render(); // 빈 배경만
-  }
+  if (!session) render();
 })();
 
 
-// 인증 버튼 이벤트 연결
-document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('auth-submit-btn').addEventListener('click', authSubmit);
-  document.getElementById('tab-login').addEventListener('click',  () => switchAuthTab('login'));
-  document.getElementById('tab-signup').addEventListener('click', () => switchAuthTab('signup'));
-  document.getElementById('auth-email').addEventListener('keydown', e => { if (e.key === 'Enter') authSubmit(); });
-  document.getElementById('auth-pw').addEventListener('keydown',    e => { if (e.key === 'Enter') authSubmit(); });
+// 인증 버튼 이벤트 연결 + 앱 초기화
+document.getElementById('auth-submit-btn').addEventListener('click', authSubmit);
+document.getElementById('tab-login').addEventListener('click',  () => switchAuthTab('login'));
+document.getElementById('tab-signup').addEventListener('click', () => switchAuthTab('signup'));
+document.getElementById('auth-email').addEventListener('keydown', e => { if (e.key === 'Enter') authSubmit(); });
+document.getElementById('auth-pw').addEventListener('keydown',    e => { if (e.key === 'Enter') authSubmit(); });
 
-  // 초기 연도 표시
-  document.getElementById('year-label').textContent = S.year;
-
-  // URL 해시로 탭 복원
-  const hash = location.hash.replace('#','');
-  if (['dash','proj','emp','salary','master','history','tips'].includes(hash)) S.view = hash;
-
-  render();
-});
+document.getElementById('year-label').textContent = S.year;
+render();
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
