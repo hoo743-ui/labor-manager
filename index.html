@@ -497,7 +497,18 @@ input[type=range]#pop-slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
 // ── CONFIG ──────────────────────────────────────
 const SUPA_URL = 'https://suunsnhegngvjuoguiie.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1dW5zbmhlZ25ndmp1b2d1aWllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3NzE5OTMsImV4cCI6MjA5MDM0Nzk5M30.fPXAQm1897s5FgrM7bri6ugZ1BCHWmOlSTEyyxhfCMU';
+<<<<<<< HEAD
 const db = supabase.createClient(SUPA_URL, SUPA_KEY);
+=======
+const db = supabase.createClient(SUPA_URL, SUPA_KEY, {
+  auth: {
+    storageKey: 'cosd-auth',
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true,
+  }
+});
+>>>>>>> d7b5132 (파일 수정)
 
 const MN = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
 
