@@ -5,10 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>COSD 사업 관리 시스템</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
-:root {
+:root{
   --bg:#0f1117;--sf:#181c27;--sf2:#1e2334;--sf3:#242840;
   --b:rgba(255,255,255,0.07);--b2:rgba(255,255,255,0.13);--b3:rgba(255,255,255,0.2);
   --tx:#e8eaf0;--tx2:#8b92a8;--tx3:#484f66;
@@ -23,23 +21,29 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{font-size:13px}
 body{font-family:var(--sans);background:var(--bg);color:var(--tx);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+/* ── TOPBAR ── */
 .topbar{display:flex;align-items:center;gap:12px;padding:10px 20px;background:var(--sf);border-bottom:1px solid var(--b);flex-shrink:0}
-.logo{font-size:15px;font-weight:700;letter-spacing:-.3px;white-space:nowrap;display:flex;align-items:center;gap:8px}
+.logo{font-size:15px;font-weight:700;letter-spacing:-.5px;white-space:nowrap;display:flex;align-items:center;gap:8px}
 .logo-badge{background:var(--acc);color:#fff;font-size:10px;font-weight:700;padding:3px 7px;border-radius:4px;letter-spacing:.05em}
 .logo-text{color:var(--tx);font-weight:500;font-size:13px;letter-spacing:-.2px}
 .nav{display:flex;gap:2px;flex:1;justify-content:center}
 .nav-btn{padding:6px 14px;border-radius:6px;border:none;background:none;color:var(--tx2);font-family:var(--sans);font-size:12px;cursor:pointer;transition:all .15s;white-space:nowrap}
 .nav-btn:hover{color:var(--tx);background:var(--sf2)}
 .nav-btn.on{color:var(--acc);background:rgba(79,142,247,0.13);font-weight:500}
-.top-actions{display:flex;gap:6px;flex-shrink:0}
+.top-actions{display:flex;gap:6px;flex-shrink:0;align-items:center}
 .btn{padding:5px 12px;border-radius:6px;border:none;font-family:var(--sans);font-size:12px;cursor:pointer;transition:all .15s;white-space:nowrap}
 .btn-ghost{background:var(--sf2);color:var(--tx2);border:1px solid var(--b2)}.btn-ghost:hover{color:var(--tx)}
 .btn-pri{background:var(--acc);color:#fff}.btn-pri:hover{background:var(--acc2)}
 .btn-sm{padding:3px 9px;font-size:11px}
 .btn-danger{background:var(--red2);color:var(--red);border:1px solid rgba(240,64,96,0.25)}
+
+/* ── LAYOUT ── */
 .body{display:flex;flex:1;overflow:hidden}
 .sidebar{width:215px;flex-shrink:0;background:var(--sf);border-right:1px solid var(--b);overflow-y:auto}
 .main{flex:1;overflow-y:auto;padding:20px}
+
+/* ── SIDEBAR ── */
 .sb-section{padding:12px 0 4px}
 .sb-label{font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--tx3);padding:0 14px 5px;text-transform:uppercase}
 .sb-item{display:flex;align-items:center;gap:6px;padding:6px 14px;cursor:pointer;font-size:12px;color:var(--tx2);transition:all .1s;position:relative;user-select:none}
@@ -52,6 +56,8 @@ body{font-family:var(--sans);background:var(--bg);color:var(--tx);height:100vh;d
 .pill-err{background:var(--red2);color:var(--red)}
 .pill-gray{background:rgba(255,255,255,0.05);color:var(--tx3)}
 .sb-div{height:1px;background:var(--b);margin:4px 14px}
+
+/* ── CARDS ── */
 .card{background:var(--sf);border:1px solid var(--b);border-radius:var(--rl);padding:18px}
 .card-err{border-color:rgba(240,64,96,0.3);background:rgba(240,64,96,0.03)}
 .card-warn{border-color:rgba(240,160,48,0.28);background:rgba(240,160,48,0.03)}
@@ -65,6 +71,8 @@ body{font-family:var(--sans);background:var(--bg);color:var(--tx);height:100vh;d
 .sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
 .sh-t{font-size:14px;font-weight:700}
 .sh-sub{font-size:11px;color:var(--tx3);margin-top:2px}
+
+/* ── TABLE ── */
 .tbl-wrap{overflow-x:auto;border-radius:var(--r);border:1px solid var(--b)}
 table{width:100%;border-collapse:collapse;font-size:12px}
 thead th{background:var(--sf2);color:var(--tx3);font-weight:500;text-align:left;padding:8px 10px;white-space:nowrap;border-bottom:1px solid var(--b);position:sticky;top:0;z-index:1}
@@ -76,9 +84,13 @@ tbody td{padding:7px 10px;color:var(--tx2);white-space:nowrap}
 td.name{color:var(--tx);font-weight:500}
 td.num{font-family:var(--mono);text-align:right;font-size:12px}
 td.ctr{text-align:center}
+
+/* ── PROGRESS ── */
 .prog{background:rgba(255,255,255,0.06);border-radius:99px;overflow:hidden}
 .prog-bar{height:100%;border-radius:99px;transition:width .4s}
 .p-grn{background:var(--grn)}.p-amb{background:var(--amb)}.p-red{background:var(--red)}.p-acc{background:var(--acc)}
+
+/* ── TAGS ── */
 .tag{display:inline-flex;align-items:center;font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;letter-spacing:.03em;white-space:nowrap}
 .t-책임{background:rgba(155,109,250,0.18);color:var(--pur)}
 .t-공동{background:rgba(79,142,247,0.15);color:var(--acc)}
@@ -87,56 +99,15 @@ td.ctr{text-align:center}
 .t-warn{background:var(--amb2);color:var(--amb)}
 .t-err{background:var(--red2);color:var(--red)}
 .t-gray{background:rgba(255,255,255,0.07);color:var(--tx3)}
+
+/* ── MONTH PILLS ── */
 .mpills{display:flex;gap:3px;flex-wrap:wrap}
 .mpill{padding:4px 9px;border-radius:5px;cursor:pointer;font-size:11px;font-family:var(--mono);color:var(--tx3);border:1px solid var(--b);background:none;transition:all .12s}
 .mpill:hover{border-color:var(--b2);color:var(--tx2)}
 .mpill.on{background:var(--acc2);border-color:var(--acc);color:#fff}
-.pv-input{width:52px;background:transparent;border:1px solid transparent;color:var(--tx2);border-radius:4px;padding:3px 5px;font-family:var(--mono);font-size:12px;text-align:right;transition:all .12s}
-.pv-input:hover{border-color:var(--b2);background:var(--sf2)}
-.pv-input:focus{border-color:var(--acc);background:var(--sf2);outline:none;color:var(--tx)}
-.pv-input.v-over{color:var(--red)!important;border-color:rgba(240,64,96,0.4)!important}
-.pv-input.v-low{color:var(--amb)!important;border-color:rgba(240,160,48,0.3)!important}
-.sum-ok{color:var(--grn);font-weight:600;font-family:var(--mono);font-size:12px}
-.sum-warn{color:var(--amb);font-weight:600;font-family:var(--mono);font-size:12px}
-.sum-over{color:var(--red);font-weight:600;font-family:var(--mono);font-size:12px}
-.sum-gray{color:var(--tx3);font-family:var(--mono);font-size:12px}
-.brow{margin-bottom:10px}
-.brow-head{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;margin-bottom:4px}
-.brow-name{color:var(--tx2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px}
-.alert{display:flex;gap:10px;padding:10px 12px;border-radius:var(--r);margin-bottom:8px;font-size:12px}
-.alert-err{background:var(--red2);border:1px solid rgba(240,64,96,0.3);color:var(--red)}
-.alert-warn{background:var(--amb2);border:1px solid rgba(240,160,48,0.28);color:var(--amb)}
-.alert-info{background:rgba(79,142,247,0.08);border:1px solid rgba(79,142,247,0.2);color:var(--acc)}
-.form-row{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
-.form-label{font-size:11px;color:var(--tx3)}
-.form-input{background:var(--sf2);border:1px solid var(--b);color:var(--tx);border-radius:6px;padding:7px 10px;font-size:12px;font-family:var(--sans);outline:none;transition:border-color .15s;width:100%}
-.form-input:focus{border-color:var(--acc)}
-.form-input.mono{font-family:var(--mono)}
-select.form-input option{background:var(--sf2)}
-.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:100;align-items:center;justify-content:center}
-.overlay.open{display:flex}
-.modal{background:var(--sf);border:1px solid var(--b2);border-radius:var(--rl);padding:22px;max-height:88vh;overflow-y:auto}
-.modal-title{font-size:15px;font-weight:700;margin-bottom:18px}
-.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;padding-top:14px;border-top:1px solid var(--b)}
-#toast{position:fixed;bottom:22px;right:22px;background:var(--sf2);border:1px solid var(--b2);color:var(--tx);font-size:12px;padding:9px 16px;border-radius:8px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:200}
-::-webkit-scrollbar{width:4px;height:4px}
-::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:99px}
-.sep{height:1px;background:var(--b);margin:14px 0}
-.chip-row{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}
-.mb14{margin-bottom:14px}
-.rem-wrap{position:relative;height:22px;background:rgba(255,255,255,0.05);border-radius:4px;overflow:hidden;margin:4px 0}
-.rem-fill{position:absolute;left:0;top:0;height:100%;border-radius:4px 0 0 4px;transition:width .4s}
-.rem-label{position:absolute;right:7px;top:50%;transform:translateY(-50%);font-size:10px;font-family:var(--mono);color:var(--tx3)}
 
-/* ── RATE CELL (클릭 가능한 셀 버튼) ── */
-.rate-cell{
-  display:inline-flex;align-items:center;justify-content:flex-end;
-  width:58px;height:28px;padding:0 7px;
-  border-radius:5px;border:1px solid transparent;
-  font-family:var(--mono);font-size:12px;color:var(--tx2);
-  cursor:pointer;transition:all .12s;user-select:none;
-  position:relative;
-}
+/* ── PIVOT INPUT ── */
+.rate-cell{display:inline-flex;align-items:center;justify-content:flex-end;width:58px;height:28px;padding:0 7px;border-radius:5px;border:1px solid transparent;font-family:var(--mono);font-size:12px;color:var(--tx2);cursor:pointer;transition:all .12s;user-select:none;position:relative}
 .rate-cell:hover{border-color:var(--b2);background:var(--sf2);color:var(--tx)}
 .rate-cell.active{border-color:var(--acc);background:rgba(79,142,247,0.12);color:var(--acc)}
 .rate-cell.rc-over{color:var(--red);border-color:rgba(240,64,96,0.35);background:rgba(240,64,96,0.07)}
@@ -144,14 +115,43 @@ select.form-input option{background:var(--sf2)}
 .rate-cell.rc-ok{color:var(--grn)}
 .rate-cell-dot{width:5px;height:5px;border-radius:50%;margin-right:4px;flex-shrink:0}
 
-/* ── RATE POPOVER ── */
-#rate-pop{
-  position:fixed;z-index:300;
-  background:var(--sf);border:1px solid var(--b2);
-  border-radius:14px;padding:18px 20px;width:300px;
-  box-shadow:0 16px 48px rgba(0,0,0,.55);
-  display:none;
-}
+/* ── SUM CLASSES ── */
+.sum-ok{color:var(--grn);font-weight:600;font-family:var(--mono);font-size:12px}
+.sum-warn{color:var(--amb);font-weight:600;font-family:var(--mono);font-size:12px}
+.sum-over{color:var(--red);font-weight:600;font-family:var(--mono);font-size:12px}
+.sum-gray{color:var(--tx3);font-family:var(--mono);font-size:12px}
+
+/* ── BUDGET ── */
+.brow{margin-bottom:10px}
+.brow-head{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;margin-bottom:4px}
+.brow-name{color:var(--tx2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px}
+.rem-wrap{position:relative;height:22px;background:rgba(255,255,255,0.05);border-radius:4px;overflow:hidden;margin:4px 0}
+.rem-fill{position:absolute;left:0;top:0;height:100%;border-radius:4px 0 0 4px;transition:width .4s}
+.rem-label{position:absolute;right:7px;top:50%;transform:translateY(-50%);font-size:10px;font-family:var(--mono);color:var(--tx3)}
+
+/* ── ALERT ── */
+.alert{display:flex;gap:10px;padding:10px 12px;border-radius:var(--r);margin-bottom:8px;font-size:12px}
+.alert-err{background:var(--red2);border:1px solid rgba(240,64,96,0.3);color:var(--red)}
+.alert-warn{background:var(--amb2);border:1px solid rgba(240,160,48,0.28);color:var(--amb)}
+.alert-info{background:rgba(79,142,247,0.08);border:1px solid rgba(79,142,247,0.2);color:var(--acc)}
+
+/* ── FORM ── */
+.form-row{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.form-label{font-size:11px;color:var(--tx3)}
+.form-input{background:var(--sf2);border:1px solid var(--b);color:var(--tx);border-radius:6px;padding:7px 10px;font-size:12px;font-family:var(--sans);outline:none;transition:border-color .15s;width:100%}
+.form-input:focus{border-color:var(--acc)}
+.form-input.mono{font-family:var(--mono)}
+select.form-input option{background:var(--sf2)}
+
+/* ── MODAL ── */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:100;align-items:center;justify-content:center}
+.overlay.open{display:flex}
+.modal{background:var(--sf);border:1px solid var(--b2);border-radius:var(--rl);padding:22px;max-height:88vh;overflow-y:auto}
+.modal-title{font-size:15px;font-weight:700;margin-bottom:18px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;padding-top:14px;border-top:1px solid var(--b)}
+
+/* ── POPOVER ── */
+#rate-pop{position:fixed;z-index:300;background:var(--sf);border:1px solid var(--b2);border-radius:14px;padding:18px 20px;width:300px;box-shadow:0 16px 48px rgba(0,0,0,.55);display:none}
 #rate-pop.open{display:block;animation:popIn .15s ease}
 @keyframes popIn{from{opacity:0;transform:scale(.95) translateY(-4px)}to{opacity:1;transform:scale(1) translateY(0)}}
 .pop-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px}
@@ -159,46 +159,26 @@ select.form-input option{background:var(--sf2)}
 .pop-month{font-size:11px;color:var(--tx3);margin-top:2px}
 .pop-close{background:none;border:none;color:var(--tx3);cursor:pointer;font-size:16px;padding:0;line-height:1;flex-shrink:0}
 .pop-close:hover{color:var(--tx)}
-
-/* 슬라이더 */
 .pop-slider-wrap{margin-bottom:16px}
 .pop-slider-val{display:flex;align-items:baseline;gap:6px;margin-bottom:10px}
 .pop-val-big{font-size:32px;font-weight:700;font-family:var(--mono);line-height:1;transition:color .15s}
 .pop-val-unit{font-size:14px;color:var(--tx3)}
 .pop-val-exec{font-size:11px;color:var(--tx3);margin-left:4px}
-input[type=range]#pop-slider{
-  -webkit-appearance:none;appearance:none;
-  width:100%;height:6px;border-radius:99px;outline:none;cursor:pointer;
-  background:var(--sf2);
-  transition:background .2s;
-}
-input[type=range]#pop-slider::-webkit-slider-thumb{
-  -webkit-appearance:none;appearance:none;
-  width:20px;height:20px;border-radius:50%;
-  background:var(--acc);border:3px solid var(--sf);
-  box-shadow:0 0 0 2px var(--acc);
-  cursor:pointer;transition:transform .1s;
-}
+input[type=range]#pop-slider{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:99px;outline:none;cursor:pointer;background:var(--sf2);transition:background .2s}
+input[type=range]#pop-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:20px;height:20px;border-radius:50%;background:var(--acc);border:3px solid var(--sf);box-shadow:0 0 0 2px var(--acc);cursor:pointer;transition:transform .1s}
 input[type=range]#pop-slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
-input[type=range]#pop-slider:active::-webkit-slider-thumb{transform:scale(1.2)}
 .pop-slider-ticks{display:flex;justify-content:space-between;margin-top:5px}
 .pop-tick{font-size:9px;font-family:var(--mono);color:var(--tx3)}
-
-/* 빠른 선택 버튼 */
 .pop-presets{display:flex;gap:5px;margin-bottom:16px;flex-wrap:wrap}
 .pop-preset{padding:4px 10px;border-radius:5px;border:1px solid var(--b);background:none;color:var(--tx3);font-size:11px;font-family:var(--mono);cursor:pointer;transition:all .1s}
 .pop-preset:hover{border-color:var(--b2);color:var(--tx2);background:var(--sf2)}
 .pop-preset.active-pre{border-color:var(--acc);color:var(--acc);background:rgba(79,142,247,0.1)}
-
-/* 상태 정보 패널 */
 .pop-status{display:flex;flex-direction:column;gap:7px;padding:12px;background:var(--sf2);border-radius:8px;border:1px solid var(--b)}
 .pop-stat-row{display:flex;justify-content:space-between;align-items:center;font-size:11px}
 .pop-stat-label{color:var(--tx3)}
 .pop-stat-val{font-family:var(--mono);font-weight:600}
 .pop-stat-bar{height:3px;background:rgba(255,255,255,0.06);border-radius:99px;margin-top:3px;overflow:hidden}
 .pop-stat-bar-fill{height:100%;border-radius:99px;transition:width .25s}
-
-/* 역할 뱃지 선택 */
 .pop-roles{display:flex;gap:6px;margin-bottom:14px}
 .pop-role{padding:5px 12px;border-radius:6px;border:1px solid var(--b);background:none;font-size:11px;font-family:var(--sans);cursor:pointer;color:var(--tx3);transition:all .12s}
 .pop-role:hover{border-color:var(--b2);color:var(--tx2)}
@@ -207,16 +187,8 @@ input[type=range]#pop-slider:active::-webkit-slider-thumb{transform:scale(1.2)}
 .pop-role.sel-cosd{border-color:var(--grn);color:var(--grn);background:rgba(46,204,135,0.1)}
 
 /* ── AUTH ── */
-#auth-screen{
-  position:fixed;inset:0;z-index:500;
-  background:var(--bg);
-  display:flex;align-items:center;justify-content:center;
-}
-.auth-card{
-  width:380px;background:var(--sf);
-  border:1px solid var(--b2);border-radius:20px;
-  padding:36px 32px;
-}
+#auth-screen{position:fixed;inset:0;z-index:500;background:var(--bg);display:flex;align-items:center;justify-content:center}
+.auth-card{width:380px;background:var(--sf);border:1px solid var(--b2);border-radius:20px;padding:36px 32px}
 .auth-logo{display:flex;align-items:center;gap:10px;margin-bottom:28px;justify-content:center}
 .auth-logo .logo-badge{font-size:13px;padding:5px 10px}
 .auth-logo .logo-text{font-size:16px;font-weight:600}
@@ -234,10 +206,35 @@ input[type=range]#pop-slider:active::-webkit-slider-thumb{transform:scale(1.2)}
 .auth-msg{font-size:12px;text-align:center;padding:8px;border-radius:6px;margin-top:4px}
 .auth-msg.err{background:var(--red2);color:var(--red);border:1px solid rgba(240,64,96,0.3)}
 .auth-msg.ok{background:var(--grn2);color:var(--grn);border:1px solid rgba(46,204,135,0.3)}
-.auth-divider{height:1px;background:var(--b);margin:4px 0}
 .user-chip{display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:6px;background:var(--sf2);border:1px solid var(--b)}
 .user-avatar{width:22px;height:22px;border-radius:50%;background:var(--acc2);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0}
+
+/* ── LOADING ── */
+.loading-overlay{position:fixed;inset:0;background:rgba(15,17,23,0.7);z-index:400;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px}
+.loading-spinner{width:36px;height:36px;border:3px solid var(--b2);border-top-color:var(--acc);border-radius:50%;animation:spin .8s linear infinite}
+.loading-text{font-size:13px;color:var(--tx2)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.skeleton{background:linear-gradient(90deg,var(--sf2) 25%,var(--sf3) 50%,var(--sf2) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:4px}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+/* ── MISC ── */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:99px}
+.sep{height:1px;background:var(--b);margin:14px 0}
+.chip-row{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}
+.mb14{margin-bottom:14px}
+#toast{position:fixed;bottom:22px;right:22px;background:var(--sf2);border:1px solid var(--b2);color:var(--tx);font-size:12px;padding:9px 16px;border-radius:8px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:200}
+
+/* ── ONBOARDING ── */
+.onboard-step{display:flex;gap:14px;align-items:flex-start;padding:14px;border:1px solid var(--b);border-radius:var(--r);margin-bottom:8px;cursor:pointer;transition:all .15s}
+.onboard-step:hover{border-color:var(--b2);background:var(--sf2)}
+.onboard-step.done{border-color:rgba(46,204,135,0.25);background:var(--grn2)}
+.onboard-num{width:28px;height:28px;border-radius:50%;background:var(--acc);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.onboard-step.done .onboard-num{background:var(--grn)}
+
 </style>
+
+
 </head>
 <body>
 
@@ -249,24 +246,24 @@ input[type=range]#pop-slider:active::-webkit-slider-thumb{transform:scale(1.2)}
       <span class="logo-text">사업 관리 시스템</span>
     </div>
     <div class="auth-tabs">
-      <button class="auth-tab on" id="tab-login" onclick="switchAuthTab('login')">로그인</button>
-      <button class="auth-tab"    id="tab-signup" onclick="switchAuthTab('signup')">회원가입</button>
+      <button class="auth-tab on" id="tab-login">로그인</button>
+      <button class="auth-tab"    id="tab-signup">회원가입</button>
     </div>
     <div class="auth-form">
       <div class="auth-input-wrap">
         <div class="auth-label">이메일</div>
-        <input class="auth-input" id="auth-email" type="email" placeholder="example@email.com" onkeydown="if(event.key==='Enter')authSubmit()">
+        <input class="auth-input" id="auth-email" type="email" placeholder="example@email.com">
       </div>
       <div class="auth-input-wrap">
         <div class="auth-label">비밀번호</div>
-        <input class="auth-input" id="auth-pw" type="password" placeholder="6자 이상" onkeydown="if(event.key==='Enter')authSubmit()">
+        <input class="auth-input" id="auth-pw" type="password" placeholder="6자 이상">
       </div>
       <div class="auth-input-wrap" id="auth-name-wrap" style="display:none">
         <div class="auth-label">이름 (선택)</div>
         <input class="auth-input" id="auth-name" type="text" placeholder="홍길동">
       </div>
       <div id="auth-msg" style="display:none"></div>
-      <button class="auth-btn" id="auth-submit-btn" onclick="authSubmit()">로그인</button>
+      <button class="auth-btn" id="auth-submit-btn">로그인</button>
     </div>
     <div style="text-align:center;margin-top:16px;font-size:11px;color:var(--tx3)">
       COSD 사업 관리 시스템
@@ -274,23 +271,27 @@ input[type=range]#pop-slider:active::-webkit-slider-thumb{transform:scale(1.2)}
   </div>
 </div>
 
+<!-- 앱 본체 -->
 <div style="display:flex;flex-direction:column;height:100vh;overflow:hidden">
+
+<!-- 상단 탑바 -->
 <div class="topbar">
   <div class="logo">
     <span class="logo-badge">COSD</span>
     <span class="logo-text">사업 관리 시스템</span>
   </div>
   <nav class="nav">
-    <button class="nav-btn on"  onclick="nav('dash')">대시보드</button>
-    <button class="nav-btn"     onclick="nav('proj')">과제별 현황</button>
-    <button class="nav-btn"     onclick="nav('emp')">직원별 참여율</button>
-    <button class="nav-btn"     onclick="nav('salary')">급여 · 잔액</button>
-    <button class="nav-btn"     onclick="nav('master')">기준 데이터</button>
-    <button class="nav-btn"     onclick="nav('history')">변경 이력</button>
-    <button class="nav-btn"     onclick="nav('tips')" style="color:var(--amb)">사용 가이드</button>
-    <button class="nav-btn"     onclick="nav('admin')" style="color:var(--red)">관리자</button>
+    <button class="nav-btn on" onclick="nav('dash')">대시보드</button>
+    <button class="nav-btn"    onclick="nav('proj')">과제별 현황</button>
+    <button class="nav-btn"    onclick="nav('emp')">직원별 참여율</button>
+    <button class="nav-btn"    onclick="nav('salary')">급여 · 잔액</button>
+    <button class="nav-btn"    onclick="nav('master')">기준 데이터</button>
+    <button class="nav-btn"    onclick="nav('history')">변경 이력</button>
+    <button class="nav-btn"    onclick="nav('tips')" style="color:var(--amb)">사용 가이드</button>
+    <button class="nav-btn"    onclick="nav('admin')" id="nav-admin" style="color:var(--red);display:none">관리자</button>
   </nav>
   <div class="top-actions">
+    <!-- 연도 전환 -->
     <div style="display:flex;align-items:center;gap:4px;border:1px solid var(--b2);border-radius:6px;padding:2px 6px;background:var(--sf2)">
       <button onclick="changeYear(-1)" style="background:none;border:none;color:var(--tx2);cursor:pointer;font-size:14px;padding:0 2px;line-height:1">‹</button>
       <span id="year-label" style="font-size:12px;font-family:var(--mono);color:var(--tx);min-width:36px;text-align:center">2025</span>
@@ -302,7 +303,7 @@ input[type=range]#pop-slider:active::-webkit-slider-thumb{transform:scale(1.2)}
     <button class="btn btn-ghost" onclick="document.getElementById('xu').click()">↑ 불러오기</button>
     <input type="file" id="xu" accept=".xlsx,.xls" style="display:none" onchange="importXL(this)">
     <button class="btn btn-pri" onclick="exportXL()">↓ 내보내기</button>
-    <!-- 로그인 유저 표시 -->
+    <!-- 사용자 칩 -->
     <div class="user-chip" id="user-chip" style="display:none">
       <div class="user-avatar" id="user-avatar">?</div>
       <span id="user-email-label" style="font-size:11px;color:var(--tx2);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
@@ -310,34 +311,29 @@ input[type=range]#pop-slider:active::-webkit-slider-thumb{transform:scale(1.2)}
     </div>
   </div>
 </div>
+
+<!-- 바디 -->
 <div class="body">
-<div class="sidebar">
-  <div class="sb-section"><div class="sb-label">직원</div><div id="sb-emps"></div></div>
-  <div class="sb-div"></div>
-  <div class="sb-section"><div class="sb-label">과제</div><div id="sb-projs"></div></div>
-</div>
-<div class="main" id="main"></div>
+  <div class="sidebar">
+    <div class="sb-section"><div class="sb-label">직원</div><div id="sb-emps"></div></div>
+    <div class="sb-div"></div>
+    <div class="sb-section"><div class="sb-label">과제</div><div id="sb-projs"></div></div>
+  </div>
+  <div class="main" id="main"></div>
 </div>
 </div>
 
-<!-- RATE POPOVER -->
+<!-- 참여율 팝오버 -->
 <div id="rate-pop">
   <div class="pop-header">
-    <div>
-      <div class="pop-proj" id="pop-proj-name"></div>
-      <div class="pop-month" id="pop-month-label"></div>
-    </div>
-    <button class="pop-close" onclick="closePop()">✕</button>
+    <div><div class="pop-proj" id="pop-proj-name"></div><div class="pop-month" id="pop-month-name"></div></div>
+    <button class="pop-close" onclick="closePop()">×</button>
   </div>
-
-  <!-- 역할 선택 -->
-  <div class="pop-roles" id="pop-roles">
-    <button class="pop-role" data-role="책임" onclick="popSetRole('책임')">책임자</button>
-    <button class="pop-role" data-role="공동" onclick="popSetRole('공동')">공동참여</button>
-    <button class="pop-role" data-role="cosd" onclick="popSetRole('cosd')">COSD</button>
+  <div class="pop-roles">
+    <button class="pop-role" id="pr-책임" onclick="popSetRole('책임')">책임자</button>
+    <button class="pop-role" id="pr-공동" onclick="popSetRole('공동')">공동참여</button>
+    <button class="pop-role" id="pr-cosd" onclick="popSetRole('cosd')">COSD</button>
   </div>
-
-  <!-- 큰 숫자 + 슬라이더 -->
   <div class="pop-slider-wrap">
     <div class="pop-slider-val">
       <span class="pop-val-big" id="pop-val">0</span>
@@ -351,8 +347,6 @@ input[type=range]#pop-slider:active::-webkit-slider-thumb{transform:scale(1.2)}
       <span class="pop-tick">100</span>
     </div>
   </div>
-
-  <!-- 빠른 선택 -->
   <div class="pop-presets">
     <button class="pop-preset" onclick="popSetVal(0)">0%</button>
     <button class="pop-preset" onclick="popSetVal(10)">10%</button>
@@ -361,8 +355,6 @@ input[type=range]#pop-slider:active::-webkit-slider-thumb{transform:scale(1.2)}
     <button class="pop-preset" onclick="popSetVal(50)">50%</button>
     <button class="pop-preset" onclick="popSetVal(100)">100%</button>
   </div>
-
-  <!-- 실시간 상태 -->
   <div class="pop-status">
     <div class="pop-stat-row">
       <span class="pop-stat-label">이달 집행 예정액</span>
@@ -392,10 +384,11 @@ input[type=range]#pop-slider:active::-webkit-slider-thumb{transform:scale(1.2)}
     <div id="import-result" style="font-size:13px;line-height:2;color:var(--tx2)"></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeOv('import-ov')">취소</button>
-      <button class="btn btn-pri" onclick="applyImport()">적용하기</button>
+      <button class="btn btn-pri"   onclick="applyImport()">적용하기</button>
     </div>
   </div>
 </div>
+
 <div class="overlay" id="emp-ov">
   <div class="modal" style="width:400px">
     <div class="modal-title" id="emp-ov-t">직원 추가</div>
@@ -405,24 +398,31 @@ input[type=range]#pop-slider:active::-webkit-slider-thumb{transform:scale(1.2)}
     <div class="form-row"><div class="form-label">직급</div>
       <select class="form-input" id="fi-erank">
         <option>책임연구원</option><option>선임연구원</option><option>연구원</option><option>보조연구원</option><option>기타</option>
-      </select></div>
+      </select>
+    </div>
     <div class="form-row"><div class="form-label">기본급 (월, 원)</div><input class="form-input mono" id="fi-esal" type="number" step="10000" placeholder="4500000"></div>
     <div class="form-row"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--tx2)">
-      <input type="checkbox" id="fi-ecosd"> COSD/특정사업 참여자 (10% 100% 산입 제외)
+      <input type="checkbox" id="fi-ecosd"> COSD/특정사업 참여자 (10% 산입 제외)
     </label></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeOv('emp-ov')">취소</button>
-      <button class="btn btn-pri" onclick="saveEmp()">저장</button>
+      <button class="btn btn-pri"   onclick="saveEmp()">저장</button>
     </div>
   </div>
 </div>
+
 <div class="overlay" id="proj-ov">
   <div class="modal" style="width:440px">
     <div class="modal-title" id="proj-ov-t">과제 추가</div>
     <div class="form-row"><div class="form-label">과제 ID</div><input class="form-input mono" id="fi-pid" placeholder="P08"></div>
     <div class="form-row"><div class="form-label">과제명</div><input class="form-input" id="fi-pname" placeholder="○○ 연구개발 과제"></div>
     <div class="form-row"><div class="form-label">유형</div>
-      <select class="form-input" id="fi-ptype"><option value="normal">일반</option><option value="cosd">COSD</option><option value="special">특정사업</option></select></div>
+      <select class="form-input" id="fi-ptype">
+        <option value="normal">일반</option>
+        <option value="cosd">COSD</option>
+        <option value="special">특정사업</option>
+      </select>
+    </div>
     <div class="form-row"><div class="form-label">인건비 예산 (원)</div><input class="form-input mono" id="fi-pbudget" type="number" step="100000" placeholder="80000000"></div>
     <div class="form-row">
       <div class="form-label">최소 참여율 (%)</div>
@@ -432,14 +432,15 @@ input[type=range]#pop-slider:active::-webkit-slider-thumb{transform:scale(1.2)}
       </div>
     </div>
     <div class="form-row"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--tx2)">
-      <input type="checkbox" id="fi-p345" checked> 3책5공 카운팅에 포함 <span style="font-size:11px;color:var(--tx3)">(제외 과제는 해제)</span>
+      <input type="checkbox" id="fi-p345" checked> 3책5공 카운팅에 포함
     </label></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeOv('proj-ov')">취소</button>
-      <button class="btn btn-pri" onclick="saveProj()">저장</button>
+      <button class="btn btn-pri"   onclick="saveProj()">저장</button>
     </div>
   </div>
 </div>
+
 <div class="overlay" id="sal-ov">
   <div class="modal" style="width:460px">
     <div class="modal-title" id="sal-ov-t">급여 입력</div>
@@ -447,14 +448,15 @@ input[type=range]#pop-slider:active::-webkit-slider-thumb{transform:scale(1.2)}
     <div id="sal-ov-f" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeOv('sal-ov')">취소</button>
-      <button class="btn btn-pri" onclick="saveSal()">저장</button>
+      <button class="btn btn-pri"   onclick="saveSal()">저장</button>
     </div>
   </div>
 </div>
+
 <div class="overlay" id="feedback-ov">
   <div class="modal" style="width:440px">
     <div class="modal-title">의견 보내기</div>
-    <div style="font-size:12px;color:var(--tx3);margin-bottom:14px">불편한 점, 필요한 기능, 오류 등 자유롭게 작성해주세요. 관리자에게 전달됩니다.</div>
+    <div style="font-size:12px;color:var(--tx3);margin-bottom:14px">불편한 점, 필요한 기능, 오류 등 자유롭게 작성해주세요.</div>
     <div class="form-row"><div class="form-label">구분</div>
       <select class="form-input" id="fb-type">
         <option value="bug">🐛 오류/버그 신고</option>
@@ -471,104 +473,239 @@ input[type=range]#pop-slider:active::-webkit-slider-thumb{transform:scale(1.2)}
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeOv('feedback-ov')">취소</button>
-      <button class="btn btn-pri" onclick="submitFeedback()">전송</button>
+      <button class="btn btn-pri"   onclick="submitFeedback()">전송</button>
     </div>
   </div>
 </div>
+
 <div class="overlay" id="assign-ov">
   <div class="modal" style="width:420px">
     <div class="modal-title" id="assign-modal-title">직원 배정</div>
     <div id="assign-modal-body"></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeOv('assign-ov')">취소</button>
-      <button class="btn btn-pri" id="assign-modal-save">저장</button>
+      <button class="btn btn-pri"   id="assign-modal-save">저장</button>
     </div>
   </div>
 </div>
+
 <div id="toast"></div>
 
-<script>
-const MN=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
-function r12(rate,role){return Array.from({length:12},()=>({rate,role}));}
+<!-- JS 모듈 (순서 중요) -->
 
-const S={
-  view:'dash',selMonth:new Date().getMonth(),selProj:null,selEmp:null,
+
+
+
+
+
+
+
+
+<script>
+
+// ===== config.js =====
+// ── CONFIG ──────────────────────────────────────
+const SUPA_URL = 'https://suunsnhegngvjuoguiie.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1dW5zbmhlZ25ndmp1b2d1aWllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3NzE5OTMsImV4cCI6MjA5MDM0Nzk5M30.fPXAQm1897s5FgrM7bri6ugZ1BCHWmOlSTEyyxhfCMU';
+const db = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+const MN = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+
+// ── STATE ──────────────────────────────────────
+function r12(rate, role) { return Array.from({length:12}, () => ({rate, role})); }
+
+const S = {
+  view: 'dash',
+  selMonth: new Date().getMonth(),
+  selProj: null,
+  selEmp: null,
   year: new Date().getFullYear(),
-  lockedMonths: {}, // lockedMonths[eid][m] = true
-  history: [],      // [{ts, user, action, detail}]
-  employees:[
-    {id:'E01',name:'김연구',code:'20201026',rank:'책임연구원',baseSalary:5200000,isCosd:false},
-    {id:'E02',name:'이박사',code:'20260126',rank:'선임연구원',baseSalary:4800000,isCosd:false},
-    {id:'E03',name:'박연구',code:'20040102',rank:'연구원',baseSalary:3800000,isCosd:true},
-    {id:'E04',name:'최선임',code:'20050603',rank:'선임연구원',baseSalary:4500000,isCosd:false},
-    {id:'E05',name:'정연구',code:'20100118',rank:'연구원',baseSalary:3600000,isCosd:false},
-    {id:'E06',name:'한박사',code:'20110207',rank:'책임연구원',baseSalary:5500000,isCosd:false},
-    {id:'E07',name:'오연구',code:'20130522',rank:'연구원',baseSalary:3500000,isCosd:true},
-  ],
-  projects:[
-    {id:'P01',name:'차세대 배터리 소재',type:'normal',budget:120000000,include345:true,minRate:10},
-    {id:'P02',name:'AI 신약 개발',type:'normal',budget:95000000,include345:true,minRate:20},
-    {id:'P03',name:'COSD 스마트팜',type:'cosd',budget:60000000,include345:false,minRate:10},
-    {id:'P04',name:'탄소포집 기술',type:'normal',budget:80000000,include345:true,minRate:10},
-    {id:'P05',name:'수소연료전지',type:'normal',budget:75000000,include345:true,minRate:10},
-    {id:'P06',name:'양자컴퓨팅 알고리즘',type:'normal',budget:50000000,include345:false,minRate:10},
-    {id:'P07',name:'해양 바이오 소재',type:'normal',budget:40000000,include345:true,minRate:10},
-  ],
-  participation:{
-    E01:{P01:r12(30,'책임'),P02:r12(20,'공동'),P04:r12(10,'공동')},
-    E02:{P02:r12(35,'책임'),P05:r12(25,'공동'),P06:r12(20,'공동'),P01:r12(20,'공동')},
-    E03:{P03:r12(10,'cosd'),P01:r12(30,'공동'),P04:r12(40,'책임'),P07:r12(30,'공동')},
-    E04:{P05:r12(35,'책임'),P07:r12(30,'공동'),P02:r12(15,'공동'),P06:r12(20,'공동')},
-    E05:{P06:r12(50,'책임'),P04:r12(30,'공동'),P07:r12(20,'공동')},
-    E06:{P01:r12(25,'공동'),P02:r12(30,'책임'),P05:r12(20,'공동'),P03:r12(15,'cosd')},
-    E07:{P03:r12(10,'cosd'),P07:r12(40,'책임'),P05:r12(30,'공동'),P04:r12(20,'공동')},
-  },
-  salary:{
-    E01:[5250000,5250000,5400000,null,null,null,null,null,null,null,null,null],
-    E02:[4850000,4850000,null,null,null,null,null,null,null,null,null,null],
-    E03:[3820000,null,null,null,null,null,null,null,null,null,null,null],
-    E04:Array(12).fill(null),E05:Array(12).fill(null),
-    E06:Array(12).fill(null),E07:Array(12).fill(null),
-  },
+  lockedMonths: {},
+  history: [],
+  isAdmin: false,
+  currentUser: null,
+  isLoading: false,
+  employees: [],
+  projects: [],
+  participation: {},
+  salary: {},
 };
 
-// ── COMPUTED ──
-function getRate(e,p,m){return S.participation[e]?.[p]?.[m]?.rate??0}
-function getRole(e,p,m){return S.participation[e]?.[p]?.[m]?.role??''}
-function getSal(e,m){const v=S.salary[e]?.[m];return(v!=null)?v:(S.employees.find(x=>x.id===e)?.baseSalary??0)}
-function isCfm(e,m){return S.salary[e]?.[m]!=null}
-function effRate(e,m){let t=0;for(const p of Object.keys(S.participation[e]??{}))if(getRole(e,p,m)!=='cosd')t+=getRate(e,p,m);return t}
-function cosdRate(e,m){let t=0;for(const p of Object.keys(S.participation[e]??{}))if(getRole(e,p,m)==='cosd')t+=getRate(e,p,m);return t}
-function get345(e){let c=0,j=0;for(const p of Object.keys(S.participation[e]??{})){const proj=S.projects.find(x=>x.id===p);if(!proj?.include345)continue;const r=S.participation[e][p][0]?.role||'';if(r==='책임')c++;else if(r==='공동')j++;}return{chief:c,joint:j}}
-function mExec(e,p,m){return Math.round(getSal(e,m)*getRate(e,p,m)/100)}
-function projAnn(pid){let t=0;for(const e of Object.keys(S.participation)){if(!S.participation[e][pid])continue;for(let m=0;m<12;m++)t+=mExec(e,pid,m);}return t}
-function projUpTo(pid,upto){let t=0;for(const e of Object.keys(S.participation)){if(!S.participation[e][pid])continue;for(let m=0;m<upto;m++)t+=mExec(e,pid,m);}return t}
-function cfmUpTo(pid,upto){let t=0;for(const e of Object.keys(S.participation)){if(!S.participation[e][pid])continue;for(let m=0;m<upto;m++)if(isCfm(e,m))t+=mExec(e,pid,m);}return t}
-function hasMinVio(pid){const proj=S.projects.find(p=>p.id===pid);if(!proj)return false;for(const e of Object.keys(S.participation)){if(!S.participation[e][pid])continue;for(let m=0;m<12;m++){const r=getRate(e,pid,m);if(r>0&&r<proj.minRate)return true;}}return false}
-function allAlerts(){
-  const al=[];
-  for(const emp of S.employees){
-    for(let m=0;m<12;m++){const e=effRate(emp.id,m);if(e>100)al.push({t:'err',msg:`${emp.name} ${MN[m]}: 유효참여율 ${e}% 초과`});else if(e>90)al.push({t:'warn',msg:`${emp.name} ${MN[m]}: ${e}% (주의)`});}
-    const{chief,joint}=get345(emp.id);
-    if(chief>3)al.push({t:'err',msg:`${emp.name}: 책임자 ${chief}개 (3초과)`});
-    if(joint>5)al.push({t:'err',msg:`${emp.name}: 공동 ${joint}개 (5초과)`});
+// ── HELPERS ────────────────────────────────────
+const fmt  = n => new Intl.NumberFormat('ko-KR').format(Math.round(n));
+const fmtM = n => n >= 100000000 ? (n/100000000).toFixed(1)+'억' : n >= 10000 ? Math.round(n/10000)+'만' : fmt(n);
+const pct  = (a, b) => b ? Math.round(a/b*100) : 0;
+const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), hi);
+const pCls = p => p > 100 ? 'p-red' : p > 90 ? 'p-amb' : 'p-grn';
+const sCls = p => p > 100 ? 'sum-over' : p > 90 ? 'sum-warn' : p > 0 ? 'sum-ok' : 'sum-gray';
+
+function toast(msg, ms = 2500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.opacity = '1';
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.style.opacity = '0', ms);
+}
+
+function showLoading(text = '불러오는 중...') {
+  S.isLoading = true;
+  let el = document.getElementById('loading-overlay');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'loading-overlay';
+    el.className = 'loading-overlay';
+    el.innerHTML = `<div class="loading-spinner"></div><div class="loading-text">${text}</div>`;
+    document.body.appendChild(el);
+  } else {
+    el.querySelector('.loading-text').textContent = text;
+    el.style.display = 'flex';
   }
-  for(const proj of S.projects){
-    const p2=pct(projAnn(proj.id),proj.budget);
-    if(p2>100)al.push({t:'err',msg:`[${proj.name}] 예산 초과 (${p2}%)`});
-    else if(p2>90)al.push({t:'warn',msg:`[${proj.name}] 예산 ${p2}% 소진 예정`});
-    if(hasMinVio(proj.id))al.push({t:'warn',msg:`[${proj.name}] 최소참여율 ${proj.minRate}% 미달 항목`});
+}
+
+function hideLoading() {
+  S.isLoading = false;
+  const el = document.getElementById('loading-overlay');
+  if (el) el.style.display = 'none';
+}
+
+function setDbStatus(state) {
+  const el = document.getElementById('db-status');
+  if (!el) return;
+  const map = {
+    connecting: ['🔄 연결 중...', 'var(--tx3)'],
+    ok:         ['🟢 연결됨', 'var(--grn)'],
+    error:      ['🔴 연결 오류', 'var(--red)'],
+    saving:     ['💾 저장 중...', 'var(--amb)'],
+    saved:      ['✓ 저장됨', 'var(--grn)'],
+  };
+  const [text, color] = map[state] || ['', 'var(--tx3)'];
+  el.textContent = text;
+  el.style.color = color;
+}
+
+function addHistory(action, detail) {
+  S.history.unshift({ ts: new Date().toLocaleString('ko-KR'), action, detail });
+  if (S.history.length > 200) S.history = S.history.slice(0, 200);
+}
+
+
+// ===== computed.js =====
+// ── COMPUTED ────────────────────────────────────
+function yPart() {
+  if (!S.participation[S.year]) S.participation[S.year] = {};
+  return S.participation[S.year];
+}
+function ySal() {
+  if (!S.salary[S.year]) S.salary[S.year] = {};
+  return S.salary[S.year];
+}
+
+function getRate(e, p, m) { return yPart()[e]?.[p]?.[m]?.rate ?? 0; }
+function getRole(e, p, m) { return yPart()[e]?.[p]?.[m]?.role ?? ''; }
+function getSal(e, m) {
+  const v = ySal()[e]?.[m];
+  return (v != null) ? v : (S.employees.find(x => x.id === e)?.baseSalary ?? 0);
+}
+function isCfm(e, m) { return ySal()[e]?.[m] != null; }
+
+function effRate(e, m) {
+  let t = 0;
+  for (const p of Object.keys(yPart()[e] ?? {}))
+    if (getRole(e, p, m) !== 'cosd') t += getRate(e, p, m);
+  return t;
+}
+function cosdRate(e, m) {
+  let t = 0;
+  for (const p of Object.keys(yPart()[e] ?? {}))
+    if (getRole(e, p, m) === 'cosd') t += getRate(e, p, m);
+  return t;
+}
+
+function get345(e) {
+  let c = 0, j = 0;
+  for (const p of Object.keys(yPart()[e] ?? {})) {
+    const proj = S.projects.find(x => x.id === p);
+    if (!proj?.include345) continue;
+    const r = yPart()[e][p][0]?.role || '';
+    if (r === '책임') c++;
+    else if (r === '공동') j++;
+  }
+  return { chief: c, joint: j };
+}
+
+function mExec(e, p, m) { return Math.round(getSal(e, m) * getRate(e, p, m) / 100); }
+
+function projAnn(pid) {
+  let t = 0;
+  for (const e of Object.keys(yPart())) {
+    if (!yPart()[e][pid]) continue;
+    for (let m = 0; m < 12; m++) t += mExec(e, pid, m);
+  }
+  return t;
+}
+function projUpTo(pid, upto) {
+  let t = 0;
+  for (const e of Object.keys(yPart())) {
+    if (!yPart()[e][pid]) continue;
+    for (let m = 0; m < upto; m++) t += mExec(e, pid, m);
+  }
+  return t;
+}
+function cfmUpTo(pid, upto) {
+  let t = 0;
+  for (const e of Object.keys(yPart())) {
+    if (!yPart()[e][pid]) continue;
+    for (let m = 0; m < upto; m++) if (isCfm(e, m)) t += mExec(e, pid, m);
+  }
+  return t;
+}
+
+function hasMinVio(pid) {
+  const proj = S.projects.find(p => p.id === pid);
+  if (!proj) return false;
+  for (const e of Object.keys(yPart())) {
+    if (!yPart()[e][pid]) continue;
+    for (let m = 0; m < 12; m++) {
+      const r = getRate(e, pid, m);
+      if (r > 0 && r < proj.minRate) return true;
+    }
+  }
+  return false;
+}
+
+function allAlerts() {
+  const al = [];
+  for (const emp of S.employees) {
+    for (let m = 0; m < 12; m++) {
+      const e = effRate(emp.id, m);
+      if (e > 100) al.push({ t: 'err', msg: `${emp.name} ${MN[m]}: 유효참여율 ${e}% 초과` });
+      else if (e > 90) al.push({ t: 'warn', msg: `${emp.name} ${MN[m]}: ${e}% (주의)` });
+    }
+    const { chief, joint } = get345(emp.id);
+    if (chief > 3) al.push({ t: 'err', msg: `${emp.name}: 책임자 ${chief}개 (3초과)` });
+    if (joint > 5) al.push({ t: 'err', msg: `${emp.name}: 공동 ${joint}개 (5초과)` });
+  }
+  for (const proj of S.projects) {
+    const p2 = pct(projAnn(proj.id), proj.budget);
+    if (p2 > 100) al.push({ t: 'err', msg: `[${proj.name}] 예산 초과 (${p2}%)` });
+    else if (p2 > 90) al.push({ t: 'warn', msg: `[${proj.name}] 예산 ${p2}% 소진 예정` });
+    if (hasMinVio(proj.id)) al.push({ t: 'warn', msg: `[${proj.name}] 최소참여율 ${proj.minRate}% 미달 항목` });
   }
   return al;
 }
-const fmt=n=>new Intl.NumberFormat('ko-KR').format(Math.round(n));
-const fmtM=n=>n>=100000000?(n/100000000).toFixed(1)+'억':n>=10000?Math.round(n/10000)+'만':fmt(n);
-const pct=(a,b)=>b?Math.round(a/b*100):0;
-const clamp=(v,lo,hi)=>Math.min(Math.max(v,lo),hi);
-const pCls=p=>p>100?'p-red':p>90?'p-amb':'p-grn';
-const sCls=p=>p>100?'sum-over':p>90?'sum-warn':p>0?'sum-ok':'sum-gray';
-const rCol=r=>r<0?'var(--red)':r<0.15?'var(--amb)':'var(--tx2)';
 
+// 온보딩 체크
+function getOnboardStatus() {
+  return {
+    hasEmp:   S.employees.length > 0,
+    hasProj:  S.projects.length > 0,
+    hasPart:  Object.keys(yPart()).length > 0,
+    hasSal:   Object.keys(ySal()).length > 0,
+  };
+}
+
+
+// ===== views.js =====
 // ── SIDEBAR ──
 function renderSidebar(){
   const eEl=document.getElementById('sb-emps'),pEl=document.getElementById('sb-projs');
@@ -597,7 +734,7 @@ function renderDash(){
   const al=allAlerts(),errs=al.filter(a=>a.t==='err').length,warns=al.filter(a=>a.t==='warn').length;
   const tB=S.projects.reduce((s,p)=>s+p.budget,0),tE=S.projects.reduce((s,p)=>s+projAnn(p.id),0);
   const m=S.selMonth;
-  const mByP=S.projects.map(proj=>({proj,exec:Object.keys(S.participation).reduce((s,e)=>s+mExec(e,proj.id,m),0)}));
+  const mByP=S.projects.map(proj=>({proj,exec:Object.keys(yPart()).reduce((s,e)=>s+mExec(e,proj.id,m),0)}));
   const mTot=mByP.reduce((s,x)=>s+x.exec,0);
   return `
   <div class="sh"><div><div class="sh-t">전체 현황</div><div class="sh-sub">직원 ${S.employees.length}명 · 과제 ${S.projects.length}건</div></div></div>
@@ -652,13 +789,13 @@ function renderProj(){
   const proj=S.projects.find(p=>p.id===pid);
   const exec=projAnn(pid),rem=proj.budget-exec,p=pct(exec,proj.budget);
   const cfmExec=cfmUpTo(pid,12);
-  const participants=S.employees.filter(emp=>S.participation[emp.id]?.[pid]);
+  const participants=S.employees.filter(emp=>yPart()[emp.id]?.[pid]);
   const mRows=Array.from({length:12},(_,m)=>{
-    const me=Object.keys(S.participation).reduce((s,e)=>s+mExec(e,pid,m),0);
+    const me=Object.keys(yPart()).reduce((s,e)=>s+mExec(e,pid,m),0);
     const cum=projUpTo(pid,m+1),cfmCum=cfmUpTo(pid,m+1);
     return{m,me,cum,cfmCum,rem:proj.budget-cum,cfmRem:proj.budget-cfmCum};
   });
-  const lastCfm=Array.from({length:12},(_,m)=>S.employees.some(e=>S.participation[e.id]?.[pid]&&isCfm(e.id,m))).lastIndexOf(true);
+  const lastCfm=Array.from({length:12},(_,m)=>S.employees.some(e=>yPart()[e.id]?.[pid]&&isCfm(e.id,m))).lastIndexOf(true);
   const avail=lastCfm>=0?proj.budget-cfmUpTo(pid,lastCfm+1):proj.budget;
 
   return `
@@ -714,7 +851,7 @@ function renderProj(){
       </tr></thead>
       <tbody>
         ${mRows.map(({m,me,cum,cfmCum,rem:rv,cfmRem})=>{
-          const anyCfm=S.employees.some(e=>S.participation[e.id]?.[pid]&&isCfm(e.id,m));
+          const anyCfm=S.employees.some(e=>yPart()[e.id]?.[pid]&&isCfm(e.id,m));
           const rp=pct(rv,proj.budget);
           return `<tr${m===lastCfm?' style="background:rgba(46,204,135,0.04)"':''}>
             <td class="name" style="font-size:11px">${MN[m]}${m===lastCfm?'<span class="tag t-ok" style="font-size:9px;margin-left:4px">확정</span>':''}</td>
@@ -747,7 +884,7 @@ function renderProj(){
       <thead><tr><th>직원</th><th>역할</th>${MN.map((mn,i)=>`<th class="r" style="min-width:64px">${mn}${isLocked(participants[0]?.id,i)?'🔒':''}</th>`).join('')}<th class="r">평균</th><th></th></tr></thead>
       <tbody>
         ${participants.map(emp=>{
-          const months=S.participation[emp.id][pid];
+          const months=yPart()[emp.id][pid];
           const role=months[0]?.role||'공동';
           const avg=Math.round(months.reduce((s,v)=>s+v.rate,0)/12);
           return `<tr>
@@ -780,7 +917,7 @@ function renderEmp(){
   if(!eid)return'<div class="card">직원 없음</div>';
   const emp=S.employees.find(e=>e.id===eid);
   const{chief,joint}=get345(eid);
-  const projs=Object.keys(S.participation[eid]||{});
+  const projs=Object.keys(yPart()[eid]||{});
 
   return `
   <div class="mpills mb14" style="gap:4px">
@@ -825,7 +962,7 @@ function renderEmp(){
       <tbody>
         ${projs.map(pid=>{
           const proj=S.projects.find(p=>p.id===pid);if(!proj)return'';
-          const months=S.participation[eid][pid],role=months[0]?.role||'공동';
+          const months=yPart()[eid][pid],role=months[0]?.role||'공동';
           const avg=Math.round(months.reduce((s,v)=>s+v.rate,0)/12);
           return `<tr>
             <td class="name" style="font-size:11px;max-width:130px;overflow:hidden;text-overflow:ellipsis">${proj.name}${!proj.include345?'<span class="tag t-warn" style="font-size:9px;margin-left:3px">제외</span>':''}</td>
@@ -872,10 +1009,10 @@ function renderSalary(){
   ${S.projects.map(proj=>{
     const ann=projAnn(proj.id),p=pct(ann,proj.budget);
     const mData=Array.from({length:12},(_,m)=>{
-      const me=Object.keys(S.participation).reduce((s,e)=>s+mExec(e,proj.id,m),0);
+      const me=Object.keys(yPart()).reduce((s,e)=>s+mExec(e,proj.id,m),0);
       return{m,me,cum:projUpTo(proj.id,m+1),cfmCum:cfmUpTo(proj.id,m+1),rem:proj.budget-projUpTo(proj.id,m+1),cfmRem:proj.budget-cfmUpTo(proj.id,m+1)};
     });
-    const lastCfm=Array.from({length:12},(_,m)=>S.employees.some(e=>S.participation[e.id]?.[proj.id]&&isCfm(e.id,m))).lastIndexOf(true);
+    const lastCfm=Array.from({length:12},(_,m)=>S.employees.some(e=>yPart()[e.id]?.[proj.id]&&isCfm(e.id,m))).lastIndexOf(true);
     const avail=lastCfm>=0?proj.budget-cfmUpTo(proj.id,lastCfm+1):proj.budget;
     return `
     <div class="card mb14">
@@ -894,7 +1031,7 @@ function renderSalary(){
         <thead><tr><th>월</th><th class="r">집행예정</th><th class="r">누적</th><th class="r">잔여예산</th><th class="r">확정누적</th><th class="r">확정 후 잔여</th></tr></thead>
         <tbody>
           ${mData.map(({m,me,cum,cfmCum,rem:rv,cfmRem})=>{
-            const anyCfm=S.employees.some(e=>S.participation[e.id]?.[proj.id]&&isCfm(e.id,m));
+            const anyCfm=S.employees.some(e=>yPart()[e.id]?.[proj.id]&&isCfm(e.id,m));
             return`<tr${m===lastCfm?' style="background:rgba(46,204,135,0.04)"':''}>
               <td class="name" style="font-size:11px">${MN[m]}${m===lastCfm?'<span class="tag t-ok" style="font-size:9px;margin-left:4px">최근확정</span>':''}</td>
               <td class="num">${me>0?fmt(me):'-'}</td>
@@ -965,7 +1102,7 @@ function renderMaster(){
       <thead><tr><th>직원</th>${S.projects.filter(p=>p.include345).map(p=>`<th class="ctr" title="${p.name}" style="font-size:10px">${p.name.slice(0,4)}…</th>`).join('')}<th class="ctr">책임</th><th class="ctr">공동</th><th class="ctr">상태</th></tr></thead>
       <tbody>${S.employees.map(emp=>{const{chief,joint}=get345(emp.id);return`<tr>
         <td class="name">${emp.name}</td>
-        ${S.projects.filter(p=>p.include345).map(proj=>{const r=S.participation[emp.id]?.[proj.id]?.[0]?.role;return r?`<td class="ctr"><span class="tag t-${r}" style="font-size:9px">${r==='cosd'?'C':r.charAt(0)}</span></td>`:`<td class="ctr" style="color:var(--tx3)">-</td>`;}).join('')}
+        ${S.projects.filter(p=>p.include345).map(proj=>{const r=yPart()[emp.id]?.[proj.id]?.[0]?.role;return r?`<td class="ctr"><span class="tag t-${r}" style="font-size:9px">${r==='cosd'?'C':r.charAt(0)}</span></td>`:`<td class="ctr" style="color:var(--tx3)">-</td>`;}).join('')}
         <td class="ctr ${chief>3?'sum-over':'sum-ok'}">${chief}/3</td>
         <td class="ctr ${joint>5?'sum-over':'sum-ok'}">${joint}/5</td>
         <td class="ctr">${chief>3||joint>5?'<span class="tag t-err">초과</span>':'<span class="tag t-ok">정상</span>'}</td>
@@ -974,98 +1111,246 @@ function renderMaster(){
   </div>`;
 }
 
-// ── ACTIONS ──
-function nav(v){
-  S.view=v;
-  if(v==='proj'&&!S.selProj)S.selProj=S.projects[0]?.id;
-  if(v==='emp'&&!S.selEmp)S.selEmp=S.employees[0]?.id;
-  document.querySelectorAll('.nav-btn').forEach((b,i)=>b.classList.toggle('on',['dash','proj','emp','salary','master','history','tips','admin'][i]===v));
+
+
+// ===== actions.js =====
+// ── ACTIONS ────────────────────────────────────
+
+function nav(v) {
+  S.view = v;
+  try { history.replaceState(null, '', `#${v}`); } catch(e) {}
+  if (v === 'proj' && !S.selProj) S.selProj = S.projects[0]?.id;
+  if (v === 'emp'  && !S.selEmp)  S.selEmp  = S.employees[0]?.id;
+  document.querySelectorAll('.nav-btn').forEach((b, i) =>
+    b.classList.toggle('on', ['dash','proj','emp','salary','master','history','tips','admin'][i] === v)
+  );
   render();
 }
-function selM(m){S.selMonth=m;render()}
-function selProj(pid){S.selProj=pid;if(S.view!=='proj')nav('proj');else render()}
-function selEmp(eid){S.selEmp=eid;if(S.view!=='emp')nav('emp');else render()}
-function render(){
-  const el=document.getElementById('main');
-  const yl=document.getElementById('year-label');
-  if(yl)yl.textContent=S.year;
-  switch(S.view){case'dash':el.innerHTML=renderDash();break;case'proj':el.innerHTML=renderProj();break;case'emp':el.innerHTML=renderEmp();break;case'salary':el.innerHTML=renderSalary();break;case'master':el.innerHTML=renderMaster();break;case'history':el.innerHTML=renderHistory();break;case'tips':el.innerHTML=renderTips();break;case'admin':el.innerHTML=renderAdmin();break;}
+
+function selM(m)      { S.selMonth = m; render(); }
+function selProj(pid) { S.selProj = pid; if (S.view !== 'proj') nav('proj'); else render(); }
+function selEmp(eid)  { S.selEmp  = eid; if (S.view !== 'emp')  nav('emp');  else render(); }
+
+function render() {
+  const el = document.getElementById('main');
+  if (!el) return;
+  const yl = document.getElementById('year-label');
+  if (yl) yl.textContent = S.year;
+  const views = { dash: renderDash, proj: renderProj, emp: renderEmp, salary: renderSalary, master: renderMaster, history: renderHistory, tips: renderTips, admin: renderAdmin };
+  const fn = views[S.view];
+  if (fn) el.innerHTML = fn();
   renderSidebar();
 }
-function updateRate(eid,pid,m,val){
-  if(isLocked(eid,m)){toast('🔒 잠긴 월입니다. 잠금 해제 후 수정하세요');return;}
-  const rate=Math.max(0,Math.min(100,parseInt(val)||0));
-  if(!S.participation[eid])S.participation[eid]={};
-  if(!S.participation[eid][pid])S.participation[eid][pid]=Array.from({length:12},()=>({rate:0,role:'공동'}));
-  const old=S.participation[eid][pid][m].rate;
-  S.participation[eid][pid][m].rate=rate;
-  if(old!==rate){
-    const emp=S.employees.find(e=>e.id===eid),proj=S.projects.find(p=>p.id===pid);
-    addHistory('참여율 변경',`${emp?.name} · ${proj?.name} · ${MN[m]}: ${old}% → ${rate}%`);
+
+function updateRate(eid, pid, m, val) {
+  if (isLocked(eid, m)) { toast('🔒 잠긴 월이에요. 잠금 해제 후 수정하세요'); return; }
+  const rate = clamp(parseInt(val) || 0, 0, 100);
+  if (!yPart()[eid]) yPart()[eid] = {};
+  if (!yPart()[eid][pid]) yPart()[eid][pid] = Array.from({length:12}, () => ({rate:0, role:'공동'}));
+  const old = yPart()[eid][pid][m].rate;
+  yPart()[eid][pid][m].rate = rate;
+  if (old !== rate) {
+    const emp = S.employees.find(e => e.id === eid);
+    const proj = S.projects.find(p => p.id === pid);
+    addHistory('참여율 변경', `${emp?.name} · ${proj?.name} · ${MN[m]}: ${old}% → ${rate}%`);
+    saveRateToDB(eid, pid, m);
   }
-  setTimeout(render,80);
+  setTimeout(render, 80);
 }
-function openOv(id){document.getElementById(id).classList.add('open')}
-function closeOv(id){document.getElementById(id).classList.remove('open')}
-let _eeid=null,_epid=null,_eseid=null;
-function openEmpOv(eid){
-  _eeid=eid;const e=eid?S.employees.find(x=>x.id===eid):null;
-  document.getElementById('emp-ov-t').textContent=eid?'직원 편집':'직원 추가';
-  document.getElementById('fi-eid').value=e?.id||autoId(S.employees,'E');
-  document.getElementById('fi-eid').disabled=!!eid;
-  document.getElementById('fi-ename').value=e?.name||'';
-  document.getElementById('fi-ecode').value=e?.code||'';
-  document.getElementById('fi-erank').value=e?.rank||'연구원';
-  document.getElementById('fi-esal').value=e?.baseSalary||'';
-  document.getElementById('fi-ecosd').checked=e?.isCosd||false;
+
+function openOv(id)  { document.getElementById(id).classList.add('open'); }
+function closeOv(id) { document.getElementById(id).classList.remove('open'); }
+
+let _eeid = null, _epid = null, _eseid = null;
+
+function openEmpOv(eid) {
+  _eeid = eid;
+  const e = eid ? S.employees.find(x => x.id === eid) : null;
+  document.getElementById('emp-ov-t').textContent = eid ? '직원 편집' : '직원 추가';
+  document.getElementById('fi-eid').value     = e?.id || autoId(S.employees, 'E');
+  document.getElementById('fi-eid').disabled  = !!eid;
+  document.getElementById('fi-ename').value   = e?.name || '';
+  document.getElementById('fi-ecode').value   = e?.code || '';
+  document.getElementById('fi-erank').value   = e?.rank || '연구원';
+  document.getElementById('fi-esal').value    = e?.baseSalary || '';
+  document.getElementById('fi-ecosd').checked = e?.isCosd || false;
   openOv('emp-ov');
 }
-function saveEmp(){
-  const id=document.getElementById('fi-eid').value.trim(),name=document.getElementById('fi-ename').value.trim();
-  if(!id||!name){toast('⚠ ID와 이름은 필수');return}
-  const obj={id,name,code:document.getElementById('fi-ecode').value.trim(),rank:document.getElementById('fi-erank').value,baseSalary:parseInt(document.getElementById('fi-esal').value)||0,isCosd:document.getElementById('fi-ecosd').checked};
-  if(_eeid){const i=S.employees.findIndex(e=>e.id===_eeid);if(i>=0)S.employees[i]=obj;}
-  else{if(S.employees.find(e=>e.id===id)){toast('⚠ 이미 존재하는 ID');return}S.employees.push(obj);if(!S.salary[id])S.salary[id]=Array(12).fill(null);}
-  closeOv('emp-ov');render();toast(`✓ ${name} ${_eeid?'수정':'추가'}됨`);
+
+async function saveEmp() {
+  const id   = document.getElementById('fi-eid').value.trim();
+  const name = document.getElementById('fi-ename').value.trim();
+  if (!id || !name) { toast('⚠ ID와 이름은 필수입니다'); return; }
+  const obj = { id, name, code: document.getElementById('fi-ecode').value.trim(), rank: document.getElementById('fi-erank').value, baseSalary: parseInt(document.getElementById('fi-esal').value)||0, isCosd: document.getElementById('fi-ecosd').checked };
+  if (_eeid) { const i = S.employees.findIndex(e => e.id === _eeid); if (i >= 0) S.employees[i] = obj; }
+  else { if (S.employees.find(e => e.id === id)) { toast('⚠ 이미 존재하는 ID예요'); return; } S.employees.push(obj); if (!ySal()[id]) ySal()[id] = Array(12).fill(null); }
+  closeOv('emp-ov'); render(); toast(`✓ ${name} ${_eeid?'수정':'추가'}됨`);
+  addHistory(_eeid?'직원 수정':'직원 추가', name);
+  await saveToDB();
 }
-function delEmp(eid){const e=S.employees.find(x=>x.id===eid);if(!confirm(`"${e?.name}" 삭제할까요?`))return;S.employees=S.employees.filter(x=>x.id!==eid);delete S.participation[eid];delete S.salary[eid];render();toast(`✓ ${e?.name} 삭제`)}
-function openProjOv(pid){
-  _epid=pid;const p=pid?S.projects.find(x=>x.id===pid):null;
-  document.getElementById('proj-ov-t').textContent=pid?'과제 편집':'과제 추가';
-  document.getElementById('fi-pid').value=p?.id||autoId(S.projects,'P');
-  document.getElementById('fi-pid').disabled=!!pid;
-  document.getElementById('fi-pname').value=p?.name||'';
-  document.getElementById('fi-ptype').value=p?.type||'normal';
-  document.getElementById('fi-pbudget').value=p?.budget||'';
-  document.getElementById('fi-pmin').value=p?.minRate??10;
-  document.getElementById('fi-p345').checked=p?.include345??true;
+
+async function delEmp(eid) {
+  const e = S.employees.find(x => x.id === eid);
+  if (!confirm(`"${e?.name}"을 삭제할까요?`)) return;
+  S.employees = S.employees.filter(x => x.id !== eid);
+  for (const yr of Object.keys(S.participation)) delete S.participation[yr][eid];
+  for (const yr of Object.keys(S.salary))        delete S.salary[yr][eid];
+  render(); toast(`✓ ${e?.name} 삭제됨`);
+  addHistory('직원 삭제', e?.name);
+  try { await deleteEmpFromDB(eid); } catch(err) { toast(`⚠ DB 삭제 실패: ${err.message}`, 4000); }
+}
+
+function openProjOv(pid) {
+  _epid = pid;
+  const p = pid ? S.projects.find(x => x.id === pid) : null;
+  document.getElementById('proj-ov-t').textContent = pid ? '과제 편집' : '과제 추가';
+  document.getElementById('fi-pid').value     = p?.id || autoId(S.projects, 'P');
+  document.getElementById('fi-pid').disabled  = !!pid;
+  document.getElementById('fi-pname').value   = p?.name || '';
+  document.getElementById('fi-ptype').value   = p?.type || 'normal';
+  document.getElementById('fi-pbudget').value = p?.budget || '';
+  document.getElementById('fi-pmin').value    = p?.minRate ?? 10;
+  document.getElementById('fi-p345').checked  = p?.include345 ?? true;
   openOv('proj-ov');
 }
-function saveProj(){
-  const id=document.getElementById('fi-pid').value.trim(),name=document.getElementById('fi-pname').value.trim();
-  if(!id||!name){toast('⚠ ID와 과제명은 필수');return}
-  const obj={id,name,type:document.getElementById('fi-ptype').value,budget:parseInt(document.getElementById('fi-pbudget').value)||0,minRate:parseInt(document.getElementById('fi-pmin').value)||10,include345:document.getElementById('fi-p345').checked};
-  if(_epid){const i=S.projects.findIndex(p=>p.id===_epid);if(i>=0)S.projects[i]=obj;}
-  else{if(S.projects.find(p=>p.id===id)){toast('⚠ 이미 존재하는 ID');return}S.projects.push(obj);}
-  closeOv('proj-ov');render();toast(`✓ "${name}" ${_epid?'수정':'추가'}됨`);
+
+async function saveProj() {
+  const id   = document.getElementById('fi-pid').value.trim();
+  const name = document.getElementById('fi-pname').value.trim();
+  if (!id || !name) { toast('⚠ ID와 과제명은 필수입니다'); return; }
+  const obj = { id, name, type: document.getElementById('fi-ptype').value, budget: parseInt(document.getElementById('fi-pbudget').value)||0, minRate: parseInt(document.getElementById('fi-pmin').value)||10, include345: document.getElementById('fi-p345').checked };
+  if (_epid) { const i = S.projects.findIndex(p => p.id === _epid); if (i >= 0) S.projects[i] = obj; }
+  else { if (S.projects.find(p => p.id === id)) { toast('⚠ 이미 존재하는 ID예요'); return; } S.projects.push(obj); }
+  closeOv('proj-ov'); render(); toast(`✓ "${name}" ${_epid?'수정':'추가'}됨`);
+  addHistory(_epid?'과제 수정':'과제 추가', name);
+  await saveToDB();
 }
-function delProj(pid){const p=S.projects.find(x=>x.id===pid);if(!confirm(`"${p?.name}" 삭제할까요?`))return;S.projects=S.projects.filter(x=>x.id!==pid);for(const e of Object.keys(S.participation))delete S.participation[e][pid];render();toast(`✓ "${p?.name}" 삭제`)}
-function openSalOv(eid){
-  _eseid=eid;const emp=S.employees.find(e=>e.id===eid);
-  document.getElementById('sal-ov-t').textContent=`급여 입력 — ${emp?.name}`;
-  const sal=S.salary[eid]||Array(12).fill(null);
-  document.getElementById('sal-ov-f').innerHTML=MN.map((mn,i)=>`<div class="form-row"><div class="form-label">${mn}</div>
+
+async function delProj(pid) {
+  const p = S.projects.find(x => x.id === pid);
+  if (!confirm(`"${p?.name}"을 삭제할까요?`)) return;
+  S.projects = S.projects.filter(x => x.id !== pid);
+  for (const yr of Object.keys(S.participation))
+    for (const eid of Object.keys(S.participation[yr]||{})) delete S.participation[yr][eid][pid];
+  render(); toast(`✓ "${p?.name}" 삭제됨`);
+  addHistory('과제 삭제', p?.name);
+  try { await deleteProjFromDB(pid); } catch(err) { toast(`⚠ DB 삭제 실패: ${err.message}`, 4000); }
+}
+
+function openSalOv(eid) {
+  _eseid = eid;
+  const emp = S.employees.find(e => e.id === eid);
+  document.getElementById('sal-ov-t').textContent = `급여 입력 — ${emp?.name}`;
+  const sal = ySal()[eid] || Array(12).fill(null);
+  document.getElementById('sal-ov-f').innerHTML = MN.map((mn, i) => `
+    <div class="form-row"><div class="form-label">${mn}</div>
     <input class="form-input mono" id="si-${i}" type="number" value="${sal[i]??''}" placeholder="${fmt(emp?.baseSalary||0)}" step="10000"></div>`).join('');
   openOv('sal-ov');
 }
-function saveSal(){
-  const eid=_eseid;if(!S.salary[eid])S.salary[eid]=Array(12).fill(null);
-  for(let i=0;i<12;i++){const v=document.getElementById(`si-${i}`).value;S.salary[eid][i]=v?parseInt(v):null;}
-  closeOv('sal-ov');render();toast('✓ 급여 저장됨');
-}
-function autoId(arr,prefix){const nums=arr.map(x=>parseInt(x.id.replace(/\D/g,''))||0);return prefix+String(Math.max(0,...nums)+1).padStart(2,'0')}
-function toast(msg,ms=2500){const t=document.getElementById('toast');t.textContent=msg;t.style.opacity='1';clearTimeout(t._t);t._t=setTimeout(()=>t.style.opacity='0',ms)}
 
+async function saveSal() {
+  const eid = _eseid;
+  if (!ySal()[eid]) ySal()[eid] = Array(12).fill(null);
+  for (let i = 0; i < 12; i++) {
+    const v = document.getElementById(`si-${i}`).value;
+    ySal()[eid][i] = v ? parseInt(v) : null;
+  }
+  closeOv('sal-ov'); render(); toast('✓ 급여 저장됨');
+  addHistory('급여 입력', S.employees.find(e => e.id === eid)?.name);
+  await saveToDB();
+}
+
+function autoId(arr, prefix) {
+  const nums = arr.map(x => parseInt(x.id.replace(/\D/g,''))||0);
+  return prefix + String(Math.max(0,...nums)+1).padStart(2,'0');
+}
+
+// 엑셀
+let _pImport = null;
+function importXL(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'binary' });
+      const { data, msgs } = parseXL(wb);
+      _pImport = data;
+      document.getElementById('import-result').innerHTML = msgs.join('<br>');
+      openOv('import-ov');
+    } catch(err) { toast(`⚠ 파일 읽기 실패: ${err.message}`, 4000); }
+    input.value = '';
+  };
+  reader.readAsBinaryString(file);
+}
+
+function parseXL(wb) {
+  const data = { employees:[], projects:[], participation:{}, salary:{} };
+  const msgs = [];
+  if (wb.SheetNames.includes('직원마스터')) {
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets['직원마스터'], { defval:'' });
+    for (const r of rows) {
+      const id = String(r['직원ID']||'').trim(); if (!id) continue;
+      data.employees.push({ id, name:String(r['이름']||'').trim(), code:String(r['사원코드']||'').trim(), rank:String(r['직급']||'').trim(), baseSalary:Number(r['기본급(월)']||0), isCosd:String(r['COSD여부']||'').toUpperCase()==='Y' });
+    }
+    msgs.push(`<span style="color:var(--grn)">✓ 직원마스터</span>: ${data.employees.length}명`);
+  }
+  if (wb.SheetNames.includes('과제마스터')) {
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets['과제마스터'], { defval:'' });
+    for (const r of rows) {
+      const id = String(r['과제ID']||'').trim(); if (!id) continue;
+      data.projects.push({ id, name:String(r['과제명']||'').trim(), type:String(r['유형']||'normal').trim().toLowerCase(), budget:Number(r['인건비예산(원)']||0), include345:String(r['3책5공포함']||'').toUpperCase()==='Y', minRate:Number(r['최소참여율%']||10) });
+    }
+    msgs.push(`<span style="color:var(--grn)">✓ 과제마스터</span>: ${data.projects.length}건`);
+  }
+  if (wb.SheetNames.includes('참여율')) {
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets['참여율'], { defval:'' });
+    let cnt = 0;
+    for (const r of rows) {
+      const eid=String(r['직원ID']||'').trim(), pid=String(r['과제ID']||'').trim(), role=String(r['역할']||'공동').trim();
+      if (!eid||!pid) continue;
+      if (!data.participation[eid]) data.participation[eid]={};
+      data.participation[eid][pid] = MN.map(mn=>({rate:Number(r[mn+'%']||0),role})); cnt++;
+    }
+    msgs.push(`<span style="color:var(--grn)">✓ 참여율</span>: ${cnt}개 행`);
+  }
+  if (wb.SheetNames.includes('급여실적')) {
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets['급여실적'], { defval:'' });
+    for (const r of rows) {
+      const eid=String(r['직원ID']||'').trim(); if (!eid) continue;
+      data.salary[eid]=MN.map(mn=>{const v=r[mn];return(v!==''&&v!=null)?Number(v):null;});
+    }
+    msgs.push(`<span style="color:var(--grn)">✓ 급여실적</span>: ${Object.keys(data.salary).length}명`);
+  }
+  return { data, msgs };
+}
+
+async function applyImport() {
+  if (!_pImport) return;
+  const d = _pImport;
+  if (d.employees.length > 0) S.employees = d.employees;
+  if (d.projects.length > 0)  S.projects  = d.projects;
+  if (Object.keys(d.participation).length > 0) S.participation[S.year] = d.participation;
+  for (const [k,v] of Object.entries(d.salary)) { if (!S.salary[S.year]) S.salary[S.year]={}; S.salary[S.year][k]=v; }
+  _pImport = null; closeOv('import-ov'); render(); toast('✓ 데이터 적용 완료');
+  addHistory('엑셀 불러오기', `직원 ${d.employees.length}명 · 과제 ${d.projects.length}건`);
+  await saveToDB();
+}
+
+function exportXL() {
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['직원ID','이름','사원코드','직급','기본급(월)','COSD여부'],...S.employees.map(e=>[e.id,e.name,e.code,e.rank,e.baseSalary,e.isCosd?'Y':'N'])]), '직원마스터');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['과제ID','과제명','유형','인건비예산(원)','3책5공포함','최소참여율%'],...S.projects.map(p=>[p.id,p.name,p.type,p.budget,p.include345?'Y':'N',p.minRate])]), '과제마스터');
+  const partRows=[['직원ID','과제ID','역할',...MN.map(m=>m+'%')]];
+  for (const eid of Object.keys(yPart())) for (const pid of Object.keys(yPart()[eid])) { const months=yPart()[eid][pid]; partRows.push([eid,pid,months[0]?.role||'공동',...months.map(v=>v.rate)]); }
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(partRows), '참여율');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['직원ID',...MN],...S.employees.map(e=>[e.id,...(ySal()[e.id]||Array(12).fill(null)).map(v=>v??'')])]), '급여실적');
+  XLSX.writeFile(wb, `COSD_인건비_${S.year}.xlsx`);
+  toast('✓ 엑셀 내보내기 완료');
+}
+
+
+// ===== popover.js =====
 // ── RATE CELL RENDERER ──────────────────────────────
 function rateCell(eid, pid, m) {
   const rate = getRate(eid, pid, m);
@@ -1162,10 +1447,10 @@ function popSlide(val, commit = true) {
   // 미리 반영해서 계산 (실제 저장은 commit 시)
   const oldRate = getRate(POP.eid, POP.pid, POP.m);
   if (commit) {
-    if (!S.participation[POP.eid]) S.participation[POP.eid] = {};
-    if (!S.participation[POP.eid][POP.pid])
-      S.participation[POP.eid][POP.pid] = Array.from({length:12}, () => ({rate:0, role:'공동'}));
-    S.participation[POP.eid][POP.pid][POP.m].rate = val;
+    if (!yPart()[POP.eid]) yPart()[POP.eid] = {};
+    if (!yPart()[POP.eid][POP.pid])
+      yPart()[POP.eid][POP.pid] = Array.from({length:12}, () => ({rate:0, role:'공동'}));
+    yPart()[POP.eid][POP.pid][POP.m].rate = val;
   }
 
   const execAmt = Math.round(sal * val / 100);
@@ -1242,11 +1527,11 @@ function popSetVal(v) {
 
 function popSetRole(role) {
   if (!POP.eid || !POP.pid) return;
-  if (!S.participation[POP.eid]) S.participation[POP.eid] = {};
-  if (!S.participation[POP.eid][POP.pid])
-    S.participation[POP.eid][POP.pid] = Array.from({length:12}, () => ({rate:0, role:'공동'}));
+  if (!yPart()[POP.eid]) yPart()[POP.eid] = {};
+  if (!yPart()[POP.eid][POP.pid])
+    yPart()[POP.eid][POP.pid] = Array.from({length:12}, () => ({rate:0, role:'공동'}));
   // 같은 역할이면 전체 월에, 단일 월만 바꾸려면 m만
-  S.participation[POP.eid][POP.pid][POP.m].role = role;
+  yPart()[POP.eid][POP.pid][POP.m].role = role;
   document.querySelectorAll('.pop-role').forEach(b => {
     b.className = 'pop-role' + (b.dataset.role === role ? ` sel-${role}` : '');
   });
@@ -1280,7 +1565,7 @@ function refreshSummaryRow(eid, pid) {
   const projRow = document.getElementById(projRowId);
   if (projRow) {
     projRow.innerHTML = Array.from({length:12}, (_, m) => {
-      const parts = S.employees.filter(e => S.participation[e.id]?.[pid]);
+      const parts = S.employees.filter(e => yPart()[e.id]?.[pid]);
       const tot = parts.reduce((s, e) => s + mExec(e.id, pid, m), 0);
       return `<td class="num" style="color:var(--tx2)">${tot > 0 ? fmt(tot) : '-'}</td>`;
     }).join('') + '<td></td>';
@@ -1304,7 +1589,7 @@ function exportXL(){
   wsP['!cols']=[{wch:8},{wch:22},{wch:10},{wch:16},{wch:10},{wch:10}];
   XLSX.utils.book_append_sheet(wb,wsP,'과제마스터');
   const rRows=[['직원ID','직원이름','과제ID','과제명','역할',...MN.map(m=>m+'%')]];
-  for(const eid of Object.keys(S.participation)){const emp=S.employees.find(e=>e.id===eid);for(const pid of Object.keys(S.participation[eid])){const proj=S.projects.find(p=>p.id===pid),months=S.participation[eid][pid];rRows.push([eid,emp?.name||'',pid,proj?.name||'',months[0]?.role||'공동',...months.map(m=>m.rate)]);}}
+  for(const eid of Object.keys(yPart())){const emp=S.employees.find(e=>e.id===eid);for(const pid of Object.keys(yPart()[eid])){const proj=S.projects.find(p=>p.id===pid),months=yPart()[eid][pid];rRows.push([eid,emp?.name||'',pid,proj?.name||'',months[0]?.role||'공동',...months.map(m=>m.rate)]);}}
   const wsR=XLSX.utils.aoa_to_sheet(rRows);wsR['!cols']=[{wch:8},{wch:10},{wch:8},{wch:20},{wch:8},...Array(12).fill({wch:6})];
   XLSX.utils.book_append_sheet(wb,wsR,'참여율');
   const wsS=XLSX.utils.aoa_to_sheet([['직원ID','직원이름',...MN],...S.employees.map(e=>[e.id,e.name,...(S.salary[e.id]||Array(12).fill(null)).map(v=>v??'')])]);
@@ -1355,6 +1640,9 @@ S.selProj=S.projects[0]?.id;S.selEmp=S.employees[0]?.id;
 // ══════════════════════════════════════════════
 // ① 연도 전환
 // ══════════════════════════════════════════════
+
+
+// ===== features.js =====
 function changeYear(dir) {
   S.year += dir;
   document.getElementById('year-label').textContent = S.year;
@@ -1366,12 +1654,12 @@ function changeYear(dir) {
 // ② 참여율 복사 기능
 // ══════════════════════════════════════════════
 function copyRateToAll(eid, pid, fromMonth) {
-  const src = S.participation[eid]?.[pid]?.[fromMonth];
+  const src = yPart()[eid]?.[pid]?.[fromMonth];
   if (!src) return;
   if (!confirm(`${MN[fromMonth]} 참여율(${src.rate}%)을 전체 월에 복사할까요?`)) return;
   for (let m = 0; m < 12; m++) {
     if (isLocked(eid, m)) continue;
-    S.participation[eid][pid][m] = { rate: src.rate, role: src.role };
+    yPart()[eid][pid][m] = { rate: src.rate, role: src.role };
   }
   addHistory('참여율 복사', `${S.employees.find(e=>e.id===eid)?.name} · ${S.projects.find(p=>p.id===pid)?.name} · ${MN[fromMonth]} → 전체`);
   render();
@@ -1379,7 +1667,7 @@ function copyRateToAll(eid, pid, fromMonth) {
 }
 
 function copyRowToAll(eid, pid) {
-  const months = S.participation[eid]?.[pid];
+  const months = yPart()[eid]?.[pid];
   if (!months) return;
   const src = months[S.selMonth];
   if (!src) return;
@@ -1455,15 +1743,15 @@ function renderHistory() {
 // ══════════════════════════════════════════════
 function openAssignModal(pid) {
   const proj = S.projects.find(p=>p.id===pid);
-  const assigned = S.employees.filter(e=>S.participation[e.id]?.[pid]);
-  const unassigned = S.employees.filter(e=>!S.participation[e.id]?.[pid]);
+  const assigned = S.employees.filter(e=>yPart()[e.id]?.[pid]);
+  const unassigned = S.employees.filter(e=>!yPart()[e.id]?.[pid]);
   const el = document.getElementById('assign-modal-body');
   document.getElementById('assign-modal-title').textContent = `직원 배정 — ${proj?.name}`;
   el.innerHTML = `
     <div style="font-size:12px;color:var(--tx3);margin-bottom:12px">체크하면 해당 과제 참여 연구원으로 추가됩니다.</div>
     <div style="display:flex;flex-direction:column;gap:6px">
       ${S.employees.map(emp=>{
-        const isAssigned = !!S.participation[emp.id]?.[pid];
+        const isAssigned = !!yPart()[emp.id]?.[pid];
         return `<label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;border:1px solid var(--b);cursor:pointer;background:${isAssigned?'rgba(79,142,247,0.06)':'none'}">
           <input type="checkbox" data-eid="${emp.id}" ${isAssigned?'checked':''}>
           <span style="font-size:13px;color:var(--tx)">${emp.name}</span>
@@ -1481,17 +1769,17 @@ function saveAssign(pid) {
   checks.forEach(cb => {
     const eid = cb.dataset.eid;
     const checked = cb.checked;
-    const hasNow = !!S.participation[eid]?.[pid];
+    const hasNow = !!yPart()[eid]?.[pid];
     if (checked && !hasNow) {
-      if (!S.participation[eid]) S.participation[eid] = {};
-      S.participation[eid][pid] = Array.from({length:12}, ()=>({rate:0, role:'공동'}));
+      if (!yPart()[eid]) yPart()[eid] = {};
+      yPart()[eid][pid] = Array.from({length:12}, ()=>({rate:0, role:'공동'}));
       const emp = S.employees.find(e=>e.id===eid);
       const proj = S.projects.find(p=>p.id===pid);
       addHistory('직원 배정', `${emp?.name} → ${proj?.name}`);
     } else if (!checked && hasNow) {
       const emp = S.employees.find(e=>e.id===eid);
       const proj = S.projects.find(p=>p.id===pid);
-      delete S.participation[eid][pid];
+      delete yPart()[eid][pid];
       addHistory('배정 해제', `${emp?.name} ← ${proj?.name}`);
     }
   });
@@ -1554,7 +1842,7 @@ function printPDF() {
   <tbody>${S.employees.map(emp=>{
     const mx=Math.max(...Array.from({length:12},(_,m)=>effRate(emp.id,m)));
     const{chief,joint}=get345(emp.id);
-    const projs=Object.keys(S.participation[emp.id]||{}).map(pid=>S.projects.find(p=>p.id===pid)?.name||pid).join(', ');
+    const projs=Object.keys(yPart()[emp.id]||{}).map(pid=>S.projects.find(p=>p.id===pid)?.name||pid).join(', ');
     return `<tr>
       <td>${emp.name}</td><td>${emp.rank}</td>
       <td style="max-width:200px">${projs||'-'}</td>
@@ -1763,7 +2051,7 @@ async function renderAdmin() {
 
     const [empCnt, projCnt, partCnt, salCnt, fbCnt] = counts.map(r => r.count || 0);
 
-    const typeMap: any = { bug: '🐛 오류/버그', feature: '✨ 기능 요청', ui: '🎨 화면 개선', etc: '💬 기타' };
+    const typeMap = { bug: '🐛 오류/버그', feature: '✨ 기능 요청', ui: '🎨 화면 개선', etc: '💬 기타' };
 
     el.innerHTML = `
     <div class="sh"><div><div class="sh-t">관리자 대시보드</div><div class="sh-sub">사용자 · 피드백 · DB 현황</div></div>
@@ -1831,31 +2119,12 @@ async function clearFeedback() {
   toast('✓ 전체 삭제됐어요');
 }
 
-// ══════════════════════════════════════════════
-// SUPABASE 연동
-// ══════════════════════════════════════════════
-const SUPA_URL = 'https://suunsnhegngvjuoguiie.supabase.co';
-const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1dW5zbmhlZ25ndmp1b2d1aWllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3NzE5OTMsImV4cCI6MjA5MDM0Nzk5M30.fPXAQm1897s5FgrM7bri6ugZ1BCHWmOlSTEyyxhfCMU';
-const db = supabase.createClient(SUPA_URL, SUPA_KEY);
 
-// 연결 상태 표시
-function setDbStatus(state) {
-  const el = document.getElementById('db-status');
-  if (!el) return;
-  const map = {
-    connecting: ['🔄 DB 연결 중...', 'var(--tx3)'],
-    ok:         ['🟢 Supabase 연결됨', 'var(--grn)'],
-    error:      ['🔴 DB 연결 오류', 'var(--red)'],
-    saving:     ['💾 저장 중...', 'var(--amb)'],
-    saved:      ['✓ 저장됨', 'var(--grn)'],
-  };
-  const [text, color] = map[state] || ['', 'var(--tx3)'];
-  el.textContent = text;
-  el.style.color = color;
-}
+// ===== db.js =====
+// ── DB LAYER ────────────────────────────────────
 
-// ── DB → S (불러오기) ──────────────────────────
 async function loadFromDB() {
+  showLoading('데이터 불러오는 중...');
   setDbStatus('connecting');
   try {
     const [empRes, projRes, partRes, salRes] = await Promise.all([
@@ -1866,8 +2135,8 @@ async function loadFromDB() {
     ]);
 
     if (empRes.error) throw empRes.error;
+    if (projRes.error) throw projRes.error;
 
-    // 직원
     if (empRes.data.length > 0) {
       S.employees = empRes.data.map(r => ({
         id: r.id, name: r.name, code: r.code || '',
@@ -1877,7 +2146,6 @@ async function loadFromDB() {
       }));
     }
 
-    // 과제
     if (projRes.data.length > 0) {
       S.projects = projRes.data.map(r => ({
         id: r.id, name: r.name, type: r.type || 'normal',
@@ -1887,200 +2155,174 @@ async function loadFromDB() {
       }));
     }
 
-    // 참여율
-    if (partRes.data.length > 0) {
-      S.participation = {};
+    // 참여율 — 연도별
+    if (partRes.data && partRes.data.length > 0) {
       for (const r of partRes.data) {
-        if (!S.participation[r.emp_id]) S.participation[r.emp_id] = {};
-        if (!S.participation[r.emp_id][r.proj_id])
-          S.participation[r.emp_id][r.proj_id] = Array.from({length:12}, () => ({rate:0, role:'공동'}));
-        S.participation[r.emp_id][r.proj_id][r.month] = {rate: r.rate, role: r.role};
+        const yr = r.year || 2025;
+        if (!S.participation[yr]) S.participation[yr] = {};
+        if (!S.participation[yr][r.emp_id]) S.participation[yr][r.emp_id] = {};
+        if (!S.participation[yr][r.emp_id][r.proj_id])
+          S.participation[yr][r.emp_id][r.proj_id] = Array.from({length:12}, () => ({rate:0, role:'공동'}));
+        S.participation[yr][r.emp_id][r.proj_id][r.month] = {rate: r.rate, role: r.role};
       }
     }
 
-    // 급여
-    if (salRes.data.length > 0) {
-      S.salary = {};
+    // 급여 — 연도별
+    if (salRes.data && salRes.data.length > 0) {
       for (const r of salRes.data) {
-        if (!S.salary[r.emp_id]) S.salary[r.emp_id] = Array(12).fill(null);
-        S.salary[r.emp_id][r.month] = r.amount;
+        const yr = r.year || 2025;
+        if (!S.salary[yr]) S.salary[yr] = {};
+        if (!S.salary[yr][r.emp_id]) S.salary[yr][r.emp_id] = Array(12).fill(null);
+        S.salary[yr][r.emp_id][r.month] = r.amount;
       }
+    }
+
+    // 관리자 여부 확인
+    if (S.currentUser) {
+      const { data: adminData } = await db.from('admins').select('email').eq('email', S.currentUser.email).single();
+      S.isAdmin = !!adminData;
     }
 
     setDbStatus('ok');
     S.selProj = S.projects[0]?.id;
     S.selEmp  = S.employees[0]?.id;
+    hideLoading();
     render();
-    toast('✓ 데이터 불러오기 완료');
+
+    // 첫 진입 시 온보딩 체크
+    const ob = getOnboardStatus();
+    if (!ob.hasEmp && !ob.hasProj) {
+      toast('💡 기준 데이터 탭에서 직원과 과제를 먼저 등록해주세요', 4000);
+    }
+
   } catch(e) {
     setDbStatus('error');
-    toast('⚠ DB 오류: ' + e.message, 5000);
-    render(); // 로컬 샘플 데이터로라도 렌더
+    hideLoading();
+    // 사용자 친화적 오류 메시지
+    const msg = e.message?.includes('fetch') ? '네트워크 연결을 확인해주세요'
+      : e.message?.includes('JWT') ? '세션이 만료됐어요. 다시 로그인해주세요'
+      : `연결 오류: ${e.message}`;
+    toast(`⚠ ${msg}`, 5000);
+    render();
   }
 }
 
-// ── S → DB (저장) ──────────────────────────────
 async function saveToDB() {
   setDbStatus('saving');
   try {
-    // 직원 upsert
     await db.from('employees').upsert(
       S.employees.map(e => ({
         id: e.id, name: e.name, code: e.code || '',
         rank: e.rank, base_salary: e.baseSalary, is_cosd: e.isCosd,
-      })),
-      { onConflict: 'id' }
+      })), { onConflict: 'id' }
     );
 
-    // 과제 upsert
     await db.from('projects').upsert(
       S.projects.map(p => ({
         id: p.id, name: p.name, type: p.type,
         budget: p.budget, include_345: p.include345, min_rate: p.minRate,
-      })),
-      { onConflict: 'id' }
+      })), { onConflict: 'id' }
     );
 
-    // 참여율 upsert
+    // 참여율 (현재 연도)
     const partRows = [];
-    for (const eid of Object.keys(S.participation)) {
-      for (const pid of Object.keys(S.participation[eid])) {
+    for (const eid of Object.keys(yPart())) {
+      for (const pid of Object.keys(yPart()[eid])) {
         for (let m = 0; m < 12; m++) {
-          const d = S.participation[eid][pid][m];
-          if (d) partRows.push({ emp_id: eid, proj_id: pid, month: m, rate: d.rate, role: d.role });
+          const d = yPart()[eid][pid][m];
+          if (d) partRows.push({ emp_id: eid, proj_id: pid, month: m, rate: d.rate, role: d.role, year: S.year });
         }
       }
     }
-    if (partRows.length > 0) {
-      await db.from('participation').upsert(partRows, { onConflict: 'emp_id,proj_id,month' });
-    }
+    if (partRows.length > 0)
+      await db.from('participation').upsert(partRows, { onConflict: 'emp_id,proj_id,month,year' });
 
-    // 급여 upsert
+    // 급여 (현재 연도)
     const salRows = [];
-    for (const eid of Object.keys(S.salary)) {
+    for (const eid of Object.keys(ySal())) {
       for (let m = 0; m < 12; m++) {
-        const v = S.salary[eid][m];
-        if (v != null) salRows.push({ emp_id: eid, month: m, amount: v });
+        const v = ySal()[eid][m];
+        if (v != null) salRows.push({ emp_id: eid, month: m, amount: v, year: S.year });
       }
     }
-    if (salRows.length > 0) {
-      await db.from('salary').upsert(salRows, { onConflict: 'emp_id,month' });
-    }
+    if (salRows.length > 0)
+      await db.from('salary').upsert(salRows, { onConflict: 'emp_id,month,year' });
 
     setDbStatus('saved');
-    toast('✓ Supabase에 저장 완료');
+    toast('✓ 저장 완료');
     setTimeout(() => setDbStatus('ok'), 3000);
   } catch(e) {
     setDbStatus('error');
-    toast('⚠ 저장 오류: ' + e.message, 5000);
+    toast(`⚠ 저장 실패: ${e.message}`, 5000);
   }
 }
 
-// ── 삭제 헬퍼 ──────────────────────────────────
-async function deleteEmpFromDB(eid) {
-  await db.from('employees').delete().eq('id', eid);
-}
-async function deleteProjFromDB(pid) {
-  await db.from('projects').delete().eq('id', pid);
-}
-
-// ── 기존 CRUD 함수에 DB 저장 후크 추가 ───────────
-const _origSaveEmp = saveEmp;
-saveEmp = async function() {
-  _origSaveEmp();
-  await saveToDB();
-};
-const _origDelEmp = delEmp;
-delEmp = async function(eid) {
-  const e = S.employees.find(x => x.id === eid);
-  if (!confirm(`"${e?.name}" 삭제할까요?`)) return;
-  S.employees = S.employees.filter(x => x.id !== eid);
-  delete S.participation[eid]; delete S.salary[eid];
-  await deleteEmpFromDB(eid);
-  render(); toast(`✓ ${e?.name} 삭제`);
-};
-const _origSaveProj = saveProj;
-saveProj = async function() {
-  _origSaveProj();
-  await saveToDB();
-};
-const _origDelProj = delProj;
-delProj = async function(pid) {
-  const p = S.projects.find(x => x.id === pid);
-  if (!confirm(`"${p?.name}" 삭제할까요?`)) return;
-  S.projects = S.projects.filter(x => x.id !== pid);
-  for (const e of Object.keys(S.participation)) delete S.participation[e][pid];
-  await deleteProjFromDB(pid);
-  render(); toast(`✓ "${p?.name}" 삭제`);
-};
-const _origSaveSal = saveSal;
-saveSal = async function() {
-  _origSaveSal();
-  await saveToDB();
-};
-const _origApplyImport = applyImport;
-applyImport = async function() {
-  _origApplyImport();
-  await saveToDB();
-};
-
-// 참여율 변경 시 자동 저장 (디바운스)
+// 참여율 단건 저장 (디바운스)
 let _saveTimer = null;
-const _origUpdateRate = updateRate;
-updateRate = function(eid, pid, m, val) {
-  _origUpdateRate(eid, pid, m, val);
+function saveRateToDB(eid, pid, m) {
   clearTimeout(_saveTimer);
   _saveTimer = setTimeout(async () => {
-    const d = S.participation[eid]?.[pid]?.[m];
-    if (d) {
+    const d = yPart()[eid]?.[pid]?.[m];
+    if (!d) return;
+    try {
       await db.from('participation').upsert(
-        [{emp_id: eid, proj_id: pid, month: m, rate: d.rate, role: d.role}],
-        {onConflict: 'emp_id,proj_id,month'}
+        [{ emp_id: eid, proj_id: pid, month: m, rate: d.rate, role: d.role, year: S.year }],
+        { onConflict: 'emp_id,proj_id,month,year' }
       );
       setDbStatus('saved');
       setTimeout(() => setDbStatus('ok'), 2000);
+    } catch(e) {
+      setDbStatus('error');
+      toast(`⚠ 저장 실패: ${e.message}`, 3000);
     }
   }, 800);
-};
+}
 
-// 실시간 구독 (다른 사용자 변경사항 자동 반영)
+async function deleteEmpFromDB(eid) {
+  const { error } = await db.from('employees').delete().eq('id', eid);
+  if (error) throw error;
+}
+async function deleteProjFromDB(pid) {
+  const { error } = await db.from('projects').delete().eq('id', pid);
+  if (error) throw error;
+}
+
 function subscribeRealtime() {
   db.channel('labor-changes')
-    .on('postgres_changes', {event:'*', schema:'public', table:'employees'},   () => loadFromDB())
-    .on('postgres_changes', {event:'*', schema:'public', table:'projects'},    () => loadFromDB())
-    .on('postgres_changes', {event:'*', schema:'public', table:'participation'}, payload => {
-      // 참여율은 부분 업데이트
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'employees' }, () => loadFromDB())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' },  () => loadFromDB())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'participation' }, payload => {
       const r = payload.new;
-      if (r && r.emp_id && r.proj_id) {
-        if (!S.participation[r.emp_id]) S.participation[r.emp_id] = {};
-        if (!S.participation[r.emp_id][r.proj_id])
-          S.participation[r.emp_id][r.proj_id] = Array.from({length:12}, () => ({rate:0, role:'공동'}));
-        S.participation[r.emp_id][r.proj_id][r.month] = {rate: r.rate, role: r.role};
-        render();
-      }
+      if (!r?.emp_id || !r?.proj_id) return;
+      const yr = r.year || 2025;
+      if (!S.participation[yr]) S.participation[yr] = {};
+      if (!S.participation[yr][r.emp_id]) S.participation[yr][r.emp_id] = {};
+      if (!S.participation[yr][r.emp_id][r.proj_id])
+        S.participation[yr][r.emp_id][r.proj_id] = Array.from({length:12}, () => ({rate:0, role:'공동'}));
+      S.participation[yr][r.emp_id][r.proj_id][r.month] = {rate: r.rate, role: r.role};
+      if (yr === S.year) render();
     })
-    .on('postgres_changes', {event:'*', schema:'public', table:'salary'}, () => loadFromDB())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'salary' }, () => loadFromDB())
     .subscribe();
 }
 
-// ── 시작 ──────────────────────────────────────
-document.getElementById('year-label').textContent = S.year;
 
-// ── AUTH 로직 ──────────────────────────────────
+// ===== auth.js =====
+// ── AUTH ────────────────────────────────────────
 let _authMode = 'login';
 
 function switchAuthTab(mode) {
   _authMode = mode;
-  document.getElementById('tab-login').classList.toggle('on', mode==='login');
-  document.getElementById('tab-signup').classList.toggle('on', mode==='signup');
-  document.getElementById('auth-submit-btn').textContent = mode==='login' ? '로그인' : '회원가입';
-  document.getElementById('auth-name-wrap').style.display = mode==='signup' ? 'flex' : 'none';
+  document.getElementById('tab-login').classList.toggle('on', mode === 'login');
+  document.getElementById('tab-signup').classList.toggle('on', mode === 'signup');
+  document.getElementById('auth-submit-btn').textContent = mode === 'login' ? '로그인' : '회원가입';
+  document.getElementById('auth-name-wrap').style.display = mode === 'signup' ? 'flex' : 'none';
   setAuthMsg('', '');
 }
 
 function setAuthMsg(msg, type) {
   const el = document.getElementById('auth-msg');
-  if (!msg) { el.style.display='none'; return; }
+  if (!msg) { el.style.display = 'none'; return; }
   el.style.display = 'block';
   el.className = 'auth-msg ' + type;
   el.textContent = msg;
@@ -2090,14 +2332,25 @@ async function authSubmit() {
   const email = document.getElementById('auth-email').value.trim();
   const pw    = document.getElementById('auth-pw').value;
   const btn   = document.getElementById('auth-submit-btn');
+
   if (!email || !pw) { setAuthMsg('이메일과 비밀번호를 입력해주세요', 'err'); return; }
-  if (pw.length < 6) { setAuthMsg('비밀번호는 6자 이상이어야 해요', 'err'); return; }
+  if (pw.length < 6)  { setAuthMsg('비밀번호는 6자 이상이어야 해요', 'err'); return; }
+
   btn.disabled = true;
   btn.textContent = '처리 중...';
+
   try {
     if (_authMode === 'login') {
-      const { error } = await db.auth.signInWithPassword({ email, password: pw });
+      const { data, error } = await db.auth.signInWithPassword({ email, password: pw });
       if (error) throw error;
+      if (data?.session) {
+        S.currentUser = data.session.user;
+        document.getElementById('auth-screen').style.display = 'none';
+        showUserChip(data.session.user);
+        addHistory('로그인', data.session.user.email);
+        await loadFromDB();
+        subscribeRealtime();
+      }
     } else {
       const name = document.getElementById('auth-name').value.trim();
       const { error } = await db.auth.signUp({
@@ -2105,58 +2358,101 @@ async function authSubmit() {
         options: { data: { name: name || email.split('@')[0] } }
       });
       if (error) throw error;
-      setAuthMsg('가입이 완료됐어요! 이메일 인증 후 로그인하세요.', 'ok');
-      btn.disabled = false; btn.textContent = '회원가입';
+      setAuthMsg('가입 완료! 로그인해주세요.', 'ok');
+      btn.disabled = false;
+      btn.textContent = '회원가입';
       return;
     }
   } catch(e) {
-    const msg = e.message.includes('Invalid login') ? '이메일 또는 비밀번호가 틀렸어요'
-      : e.message.includes('already registered') ? '이미 가입된 이메일이에요'
-      : e.message;
+    const msg = e.message?.includes('Invalid login') || e.message?.includes('invalid_credentials')
+      ? '이메일 또는 비밀번호가 틀렸어요'
+      : e.message?.includes('already registered')
+      ? '이미 가입된 이메일이에요'
+      : e.message?.includes('Email not confirmed')
+      ? '이메일 인증이 필요해요'
+      : `오류: ${e.message}`;
     setAuthMsg(msg, 'err');
     btn.disabled = false;
-    btn.textContent = _authMode==='login' ? '로그인' : '회원가입';
+    btn.textContent = _authMode === 'login' ? '로그인' : '회원가입';
   }
 }
 
 async function signOut() {
   await db.auth.signOut();
+  S.currentUser = null;
+  S.isAdmin = false;
   document.getElementById('auth-screen').style.display = 'flex';
   document.getElementById('user-chip').style.display = 'none';
+  // 네비에서 관리자 탭 숨기기
+  updateAdminNavVisibility();
   toast('로그아웃됐어요');
 }
 
 function showUserChip(user) {
   const email = user.email || '';
   const name  = user.user_metadata?.name || email.split('@')[0];
-  const initials = name.slice(0,2).toUpperCase();
-  document.getElementById('user-avatar').textContent = initials;
+  document.getElementById('user-avatar').textContent = name.slice(0,2).toUpperCase();
   document.getElementById('user-email-label').textContent = name;
   document.getElementById('user-chip').style.display = 'flex';
 }
 
-// Auth 상태 감지 → 로그인 여부에 따라 화면 전환
-db.auth.onAuthStateChange((event, session) => {
+function updateAdminNavVisibility() {
+  const adminBtn = document.getElementById('nav-admin');
+  if (adminBtn) adminBtn.style.display = S.isAdmin ? '' : 'none';
+}
+
+// Auth 상태 감지
+db.auth.onAuthStateChange(async (event, session) => {
   if (session?.user) {
+    S.currentUser = session.user;
     document.getElementById('auth-screen').style.display = 'none';
     showUserChip(session.user);
-    addHistory('로그인', session.user.email);
-    loadFromDB();
-    subscribeRealtime();
+
+    // 관리자 확인
+    const { data } = await db.from('admins').select('email').eq('email', session.user.email).maybeSingle();
+    S.isAdmin = !!data;
+    updateAdminNavVisibility();
+
+    if (event === 'SIGNED_IN') {
+      addHistory('로그인', session.user.email);
+      await loadFromDB();
+      subscribeRealtime();
+    }
   } else {
     document.getElementById('auth-screen').style.display = 'flex';
     document.getElementById('user-chip').style.display = 'none';
+    S.currentUser = null;
+    S.isAdmin = false;
+    updateAdminNavVisibility();
   }
 });
 
-// 초기 세션 확인 (새로고침 시 자동 로그인 유지)
+// 초기 세션 확인
 (async () => {
   const { data: { session } } = await db.auth.getSession();
   if (!session) {
-    // 로그인 화면 유지
-    render(); // 빈 앱 화면은 뒤에 숨김
+    render(); // 빈 배경만
   }
 })();
+
+
+// 인증 버튼 이벤트 연결
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('auth-submit-btn').addEventListener('click', authSubmit);
+  document.getElementById('tab-login').addEventListener('click',  () => switchAuthTab('login'));
+  document.getElementById('tab-signup').addEventListener('click', () => switchAuthTab('signup'));
+  document.getElementById('auth-email').addEventListener('keydown', e => { if (e.key === 'Enter') authSubmit(); });
+  document.getElementById('auth-pw').addEventListener('keydown',    e => { if (e.key === 'Enter') authSubmit(); });
+
+  // 초기 연도 표시
+  document.getElementById('year-label').textContent = S.year;
+
+  // URL 해시로 탭 복원
+  const hash = location.hash.replace('#','');
+  if (['dash','proj','emp','salary','master','history','tips'].includes(hash)) S.view = hash;
+
+  render();
+});
 </script>
 </body>
 </html>
