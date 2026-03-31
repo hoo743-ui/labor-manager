@@ -218,8 +218,10 @@ input[type=range]#pop-slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
 @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
 
 /* ── MISC ── */
-::-webkit-scrollbar{width:4px;height:4px}
-::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:99px}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.2);border-radius:99px}
+::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.32)}
+::-webkit-scrollbar-track{background:rgba(255,255,255,0.04);border-radius:99px}
 .sep{height:1px;background:var(--b);margin:14px 0}
 .chip-row{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}
 .mb14{margin-bottom:14px}
@@ -360,9 +362,9 @@ input[type=range]#pop-slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
     <button class="pop-close" onclick="closePop()">×</button>
   </div>
   <div class="pop-roles">
-    <button class="pop-role" id="pr-책임" onclick="popSetRole('책임')">책임자</button>
-    <button class="pop-role" id="pr-공동" onclick="popSetRole('공동')">공동참여</button>
-    <button class="pop-role" id="pr-cosd" onclick="popSetRole('cosd')">COSD</button>
+    <button class="pop-role" id="pr-책임" data-role="책임" onclick="popSetRole('책임')">책임자</button>
+    <button class="pop-role" id="pr-공동" data-role="공동" onclick="popSetRole('공동')">공동참여</button>
+    <button class="pop-role" id="pr-cosd" data-role="cosd" onclick="popSetRole('cosd')">COSD</button>
   </div>
   <div class="pop-slider-wrap">
     <div class="pop-slider-val">
@@ -676,7 +678,17 @@ function get345(e) {
   for (const p of Object.keys(yPart()[e] ?? {})) {
     const proj = S.projects.find(x => x.id === p);
     if (!proj?.include345) continue;
-    const r = yPart()[e][p][0]?.role || '';
+    const months = yPart()[e][p];
+    // 참여율 > 0인 달 중 non-cosd 역할 우선 결정 (책임 최우선)
+    let r = '';
+    for (let m2 = 0; m2 < 12; m2++) {
+      const mr = months[m2]?.role || '';
+      if ((months[m2]?.rate ?? 0) > 0 && mr !== 'cosd') {
+        if (mr === '책임') { r = '책임'; break; }
+        if (!r) r = mr || '공동';
+      }
+    }
+    if (!r) r = months[0]?.role || '';
     if (r === '책임') c++;
     else if (r === '공동') j++;
   }
@@ -1034,6 +1046,10 @@ function renderEmpPivot(){
               <td style="position:sticky;left:0;background:var(--sf);border-right:2px solid var(--b2);z-index:2;padding:6px 8px;white-space:nowrap">
                 <div style="font-weight:600;color:var(--tx)">${emp.name}</div>
                 <div style="font-size:10px;color:var(--tx3)">${emp.rank}</div>
+                <div id="badge345-${emp.id}" style="display:flex;gap:3px;margin-top:3px">
+                  <span class="tag ${chief>3?'t-err':'t-ok'}" style="font-size:9px;padding:1px 5px">책 ${chief}/3</span>
+                  <span class="tag ${joint>5?'t-err':'t-ok'}" style="font-size:9px;padding:1px 5px">공 ${joint}/5</span>
+                </div>
               </td>
               <td style="position:sticky;left:80px;background:var(--sf);border-right:2px solid var(--b2);z-index:2;text-align:center;padding:4px">
                 ${Array.from({length:12},(_,m)=>{const e=effRate(emp.id,m);return`<div style="font-size:10px;font-family:var(--mono);color:${e>100?'var(--red)':e>90?'var(--amb)':'var(--grn)'};line-height:1.6">${e>0?e+'%':'-'}</div>`;}).join('')}
@@ -1706,12 +1722,26 @@ function popSetRole(role) {
   if (!yPart()[POP.eid]) yPart()[POP.eid] = {};
   if (!yPart()[POP.eid][POP.pid])
     yPart()[POP.eid][POP.pid] = Array.from({length:12}, () => ({rate:0, role:'공동'}));
-  // 같은 역할이면 전체 월에, 단일 월만 바꾸려면 m만
-  yPart()[POP.eid][POP.pid][POP.m].role = role;
+  // 책임/공동은 과제 단위 역할이므로 전체 월에 일괄 적용
+  if (role === '책임' || role === '공동') {
+    yPart()[POP.eid][POP.pid].forEach(mo => { mo.role = role; });
+  } else {
+    yPart()[POP.eid][POP.pid][POP.m].role = role;
+  }
   document.querySelectorAll('.pop-role').forEach(b => {
     b.className = 'pop-role' + (b.dataset.role === role ? ` sel-${role}` : '');
   });
+  refresh345Badge(POP.eid);
   popSlide(getRate(POP.eid, POP.pid, POP.m), true);
+}
+
+function refresh345Badge(eid) {
+  const el = document.getElementById(`badge345-${eid}`);
+  if (!el) return;
+  const { chief, joint } = get345(eid);
+  el.innerHTML =
+    `<span class="tag ${chief>3?'t-err':'t-ok'}" style="font-size:9px;padding:1px 5px">책 ${chief}/3</span>` +
+    `<span class="tag ${joint>5?'t-err':'t-ok'}" style="font-size:9px;padding:1px 5px">공 ${joint}/5</span>`;
 }
 
 // 단일 셀만 업데이트 (전체 render 없이)
