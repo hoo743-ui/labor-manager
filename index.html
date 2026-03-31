@@ -40,11 +40,11 @@ body{font-family:var(--sans);background:var(--bg);color:var(--tx);height:100vh;d
 
 /* ── LAYOUT ── */
 .body{display:flex;flex:1;overflow:hidden}
-.sidebar{width:215px;flex-shrink:0;background:var(--sf);border-right:1px solid var(--b);overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.25) transparent}
-.sidebar::-webkit-scrollbar{width:6px}
-.sidebar::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.25);border-radius:99px}
-.sidebar::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.4)}
-.sidebar::-webkit-scrollbar-track{background:transparent}
+.sidebar{width:215px;flex-shrink:0;background:var(--sf);border-right:1px solid var(--b);overflow-y:auto;scrollbar-width:auto;scrollbar-color:rgba(255,255,255,0.3) rgba(255,255,255,0.05)}
+.sidebar::-webkit-scrollbar{width:8px}
+.sidebar::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.3);border-radius:99px}
+.sidebar::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.5)}
+.sidebar::-webkit-scrollbar-track{background:rgba(255,255,255,0.05);border-radius:99px}
 .main{flex:1;overflow-y:auto;padding:20px}
 
 /* ── SIDEBAR ── */
@@ -222,10 +222,10 @@ input[type=range]#pop-slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
 @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
 
 /* ── MISC ── */
-::-webkit-scrollbar{width:8px;height:8px}
-::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.2);border-radius:99px}
-::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.32)}
-::-webkit-scrollbar-track{background:rgba(255,255,255,0.04);border-radius:99px}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.25);border-radius:99px}
+::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.4)}
+::-webkit-scrollbar-track{background:rgba(255,255,255,0.05);border-radius:99px}
 .sep{height:1px;background:var(--b);margin:14px 0}
 .chip-row{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}
 .mb14{margin-bottom:14px}
@@ -351,7 +351,13 @@ input[type=range]#pop-slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
 <!-- 바디 -->
 <div class="body">
   <div class="sidebar">
-    <div class="sb-section"><div class="sb-label">직원</div><div id="sb-emps"></div></div>
+    <div style="padding:8px 10px 4px">
+      <input id="sb-search" type="text" autocomplete="off" placeholder="직원 검색..."
+        oninput="sbSearch(this.value)"
+        style="width:100%;background:var(--sf2);border:1px solid var(--b);color:var(--tx);border-radius:6px;padding:5px 9px;font-size:11px;font-family:var(--sans);outline:none;transition:border-color .15s"
+        onfocus="this.style.borderColor='var(--acc)'" onblur="this.style.borderColor='var(--b)'">
+    </div>
+    <div class="sb-section"><div class="sb-label" id="sb-emp-label">직원</div><div id="sb-emps"></div></div>
     <div class="sb-div"></div>
     <div class="sb-section"><div class="sb-label">과제</div><div id="sb-projs"></div></div>
   </div>
@@ -576,6 +582,7 @@ const S = {
   selMonth: new Date().getMonth(),
   selProj: null,
   selEmp: null,
+  empSearch: '',
   year: new Date().getFullYear(),
   lockedMonths: {},
   history: [],
@@ -774,11 +781,16 @@ function getOnboardStatus() {
 function renderSidebar(){
   const eEl=document.getElementById('sb-emps'),pEl=document.getElementById('sb-projs');
   if(!eEl||!pEl)return;
-  eEl.innerHTML=S.employees.map(emp=>{
+  const q=S.empSearch.toLowerCase();
+  const filtered=q?S.employees.filter(e=>e.name.toLowerCase().includes(q)):S.employees;
+  const lbl=document.getElementById('sb-emp-label');
+  if(lbl) lbl.textContent=q?`직원 (${filtered.length}/${S.employees.length})`:'직원';
+  eEl.innerHTML=filtered.map(emp=>{
     const mx=Math.max(...Array.from({length:12},(_,m)=>effRate(emp.id,m)));
     const{chief,joint}=get345(emp.id);
     const over=mx>100||chief>3||joint>5,warn=mx>90&&!over;
-    return `<div class="sb-item${S.view==='emp'&&S.selEmp===emp.id?' on':''}" onclick="selEmp('${emp.id}')">
+    const clickFn=q?`selEmpFocus`:`selEmp`;
+    return `<div class="sb-item${S.view==='emp'&&S.selEmp===emp.id?' on':''}" onclick="${clickFn}('${emp.id}')">
       <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${emp.name}</span>
       ${emp.isCosd?'<span class="tag t-cosd" style="font-size:9px;padding:1px 4px">C</span>':''}
       <span class="sb-pill ${over?'pill-err':warn?'pill-warn':'pill-ok'}">${over?'초과':warn?mx+'%':'정상'}</span>
@@ -1317,6 +1329,15 @@ function selM(m)      { S.selMonth = m; render(); }
 function selProj(pid) { S.selProj = pid; if (S.view !== 'proj') nav('proj'); else render(); }
 function selEmp(eid)  { S.selEmp  = eid; if (S.view !== 'emp')  nav('emp');  else render(); }
 
+// 검색에서 직원 클릭 → 개인 상세 시트로 바로 이동
+function selEmpFocus(eid) { S.empView = 'detail'; selEmp(eid); }
+
+// 사이드바 직원 검색
+function sbSearch(q) {
+  S.empSearch = q.trim();
+  renderSidebar();
+}
+
 function render() {
   const el = document.getElementById('main');
   if (!el) return;
@@ -1539,10 +1560,18 @@ function exportXL() {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['직원ID','이름','사원코드','직급','기본급(월)','COSD여부'],...S.employees.map(e=>[e.id,e.name,e.code,e.rank,e.baseSalary,e.isCosd?'Y':'N'])]), '직원마스터');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['과제ID','과제명','유형','인건비예산(원)','3책5공포함','최소참여율%'],...S.projects.map(p=>[p.id,p.name,p.type,p.budget,p.include345?'Y':'N',p.minRate])]), '과제마스터');
-  const partRows=[['직원ID','과제ID','역할',...MN.map(m=>m+'%')]];
-  for (const eid of Object.keys(yPart())) for (const pid of Object.keys(yPart()[eid])) { const months=yPart()[eid][pid]; partRows.push([eid,pid,months[0]?.role||'공동',...months.map(v=>v.rate)]); }
+  const partRows=[['직원ID','직원이름','과제ID','과제명','역할',...MN.map(m=>m+'%')]];
+  for (const eid of Object.keys(yPart())) {
+    const empName = S.employees.find(e=>e.id===eid)?.name || eid;
+    for (const pid of Object.keys(yPart()[eid])) {
+      const projName = S.projects.find(p=>p.id===pid)?.name || pid;
+      const months = yPart()[eid][pid];
+      const role = months.find(m=>m?.role&&m.role!=='공동')?.role || months[0]?.role || '공동';
+      partRows.push([eid, empName, pid, projName, role, ...months.map(v=>v.rate)]);
+    }
+  }
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(partRows), '참여율');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['직원ID',...MN],...S.employees.map(e=>[e.id,...(ySal()[e.id]||Array(12).fill(null)).map(v=>v??'')])]), '급여실적');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['직원ID','이름',...MN],...S.employees.map(e=>[e.id,e.name,...(ySal()[e.id]||Array(12).fill(null)).map(v=>v??'')])]), '급여실적');
   XLSX.writeFile(wb, `연구과제_인건비_${S.year}.xlsx`);
   toast('✓ 엑셀 내보내기 완료');
 }
