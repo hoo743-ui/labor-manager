@@ -545,10 +545,10 @@ const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 const db = supabase.createClient(SUPA_URL, SUPA_KEY, {
   auth: {
     storageKey: 'cosd-auth',
+    storage: window.sessionStorage,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
-    lock: (name, acquireTimeout, fn) => fn(),
   }
 });
 
