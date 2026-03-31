@@ -338,6 +338,8 @@ input[type=range]#pop-slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
     <button class="btn btn-ghost" style="font-size:11px" onclick="printPDF()">🖨 출력</button>
     <button class="btn btn-ghost" onclick="document.getElementById('xu').click()">↑ 불러오기</button>
     <input type="file" id="xu" accept=".xlsx,.xls" style="display:none" onchange="importXL(this)">
+    <button class="btn btn-ghost" style="color:var(--pur)" onclick="document.getElementById('xuv').click()" title="세로형(과제ID·직원ID·월·참여율) 엑셀 가져오기">↑ 세로형</button>
+    <input type="file" id="xuv" accept=".xlsx,.xls" style="display:none" onchange="importXLVert(this)">
     <button class="btn btn-pri" onclick="exportXL()">↓ 내보내기</button>
     <!-- 사용자 칩 -->
     <div class="user-chip" id="user-chip" style="display:none">
@@ -427,6 +429,30 @@ input[type=range]#pop-slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeOv('import-ov')">취소</button>
       <button class="btn btn-pri"   onclick="applyImport()">적용하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 세로형 참여율 가져오기 모달 -->
+<div class="overlay" id="vert-import-ov">
+  <div class="modal" style="width:560px;max-height:85vh;overflow-y:auto">
+    <div class="modal-title">세로형 참여율 가져오기</div>
+    <div style="background:rgba(79,142,247,0.07);border:1px solid rgba(79,142,247,0.2);border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:12px;color:var(--tx2);line-height:1.7">
+      <div style="font-weight:600;color:var(--acc);margin-bottom:6px">📋 지원 열 이름 (한 행 = 1개월 데이터)</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 20px">
+        <div><span style="color:var(--tx3)">과제ID:</span> 과제ID, 프로젝트ID, 과제번호, 사업번호</div>
+        <div><span style="color:var(--tx3)">직원ID:</span> 직원ID, 사원ID, 사원번호, 직원번호</div>
+        <div><span style="color:var(--tx3)">월:</span> 월, 월번호, month (1~12 또는 1월~12월)</div>
+        <div><span style="color:var(--tx3)">참여율:</span> 참여율, 참여율%, rate, 비율</div>
+        <div><span style="color:var(--tx3)">역할(선택):</span> 역할, role (책임/공동/cosd)</div>
+      </div>
+    </div>
+    <div id="vert-import-result" style="font-size:12px;line-height:1.9;color:var(--tx2);margin-bottom:8px"></div>
+    <div id="vert-import-preview" style="max-height:260px;overflow-y:auto"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" onclick="downloadVertSample()" style="color:var(--acc);margin-right:auto">📥 샘플 서식 다운로드</button>
+      <button class="btn btn-ghost" onclick="closeOv('vert-import-ov')">취소</button>
+      <button class="btn btn-pri" id="vert-apply-btn" onclick="applyVertImport()" disabled>적용하기</button>
     </div>
   </div>
 </div>
@@ -534,6 +560,18 @@ input[type=range]#pop-slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeOv('assign-ov')">취소</button>
       <button class="btn btn-pri"   id="assign-modal-save">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 과제별 일괄입력 — 과제 선택 모달 -->
+<div class="overlay" id="bulk-proj-ov">
+  <div class="modal" style="width:420px">
+    <div class="modal-title">과제별 일괄입력 — 과제 선택</div>
+    <div style="font-size:12px;color:var(--tx3);margin-bottom:14px">참여율을 일괄 입력할 과제를 선택하세요.</div>
+    <div id="bulk-proj-list"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeOv('bulk-proj-ov')">닫기</button>
     </div>
   </div>
 </div>
@@ -1015,6 +1053,55 @@ function renderEmp(){
   ${S.empView==='detail' ? renderEmpDetail(eid) : renderEmpPivot()}`;
 }
 
+function renderPivotChart() {
+  const allEmps = S.employees;
+  if (!allEmps.length) return '';
+  return `
+  <div class="card mb14">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-size:13px;font-weight:600">직원별 월간 유효참여율</div>
+      <div style="font-size:10px;color:var(--tx3)">
+        <span style="color:var(--grn)">■</span> 정상 &nbsp;
+        <span style="color:var(--amb)">■</span> 주의(90%+) &nbsp;
+        <span style="color:var(--red)">■</span> 초과(100%+)
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px">
+      ${allEmps.map(emp => {
+        const eff12 = Array.from({length:12}, (_, m) => effRate(emp.id, m));
+        const {chief, joint} = get345(emp.id);
+        const hasErr = Math.max(...eff12) > 100 || chief > 3 || joint > 5;
+        const hasWarn = !hasErr && Math.max(...eff12) > 90;
+        return `
+        <div style="background:var(--sf2);border-radius:8px;padding:10px 10px 8px;border:1px solid ${hasErr?'rgba(240,64,96,0.35)':hasWarn?'rgba(240,160,48,0.3)':'var(--b)'}">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
+            <div>
+              <span style="font-size:12px;font-weight:600">${emp.name}</span>
+              <span style="font-size:10px;color:var(--tx3);margin-left:5px">${emp.rank}</span>
+            </div>
+            <div style="display:flex;gap:3px">
+              <span class="tag ${chief>3?'t-err':'t-ok'}" style="font-size:9px;padding:1px 5px">책 ${chief}/3</span>
+              <span class="tag ${joint>5?'t-err':'t-ok'}" style="font-size:9px;padding:1px 5px">공 ${joint}/5</span>
+            </div>
+          </div>
+          <div style="display:flex;gap:2px;align-items:flex-end;height:32px">
+            ${eff12.map((e, m) => {
+              const h = e > 0 ? Math.max(3, Math.min(28, Math.round(e / 100 * 28))) : 2;
+              const col = e > 100 ? 'var(--red)' : e > 90 ? 'var(--amb)' : e > 0 ? 'var(--grn)' : 'rgba(255,255,255,0.07)';
+              return `<div title="${MN[m]}: ${e > 0 ? e + '%' : '미입력'}"
+                style="flex:1;height:${h}px;background:${col};border-radius:2px 2px 0 0;transition:opacity .1s;cursor:default"
+                onmouseover="this.style.opacity='.6'" onmouseout="this.style.opacity='1'"></div>`;
+            }).join('')}
+          </div>
+          <div style="display:flex;gap:2px;margin-top:3px">
+            ${eff12.map((_, m) => `<div style="flex:1;text-align:center;font-size:8px;color:var(--tx3)">${m+1}</div>`).join('')}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
+}
+
 function renderEmpPivot(){
   const allProjs = S.projects;
   const allEmps  = S.employees;
@@ -1022,6 +1109,7 @@ function renderEmpPivot(){
   if(allProjs.length===0) return'<div class="card" style="text-align:center;color:var(--tx3);padding:40px">과제를 먼저 등록해주세요</div>';
 
   return `
+  ${renderPivotChart()}
   <div class="card mb14">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
       <div>
@@ -1029,7 +1117,7 @@ function renderEmpPivot(){
         <div style="font-size:11px;color:var(--tx3);margin-top:2px">셀 클릭 → 슬라이더로 입력 · 색상: 🟢정상 🟡미달 🔴초과</div>
       </div>
       <div style="display:flex;gap:6px">
-        <button class="btn btn-ghost btn-sm" onclick="openOv('bulk-proj-ov')">📋 과제별 일괄입력</button>
+        <button class="btn btn-ghost btn-sm" onclick="openBulkProjOv()">📋 과제별 일괄입력</button>
       </div>
     </div>
     <div class="tbl-wrap" style="max-height:70vh;overflow:auto">
@@ -1574,6 +1662,150 @@ function exportXL() {
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['직원ID','이름',...MN],...S.employees.map(e=>[e.id,e.name,...(ySal()[e.id]||Array(12).fill(null)).map(v=>v??'')])]), '급여실적');
   XLSX.writeFile(wb, `연구과제_인건비_${S.year}.xlsx`);
   toast('✓ 엑셀 내보내기 완료');
+}
+
+// ── 세로형 참여율 가져오기 ────────────────────────────
+let _vertImport = null;
+
+// 열 이름 별칭 매핑
+function resolveCol(row, aliases) {
+  for (const a of aliases) if (row[a] !== undefined && row[a] !== '') return String(row[a]).trim();
+  return '';
+}
+
+function parseMonth(val) {
+  if (!val) return -1;
+  const s = String(val).trim().replace('월','');
+  const n = parseInt(s);
+  return (n >= 1 && n <= 12) ? n - 1 : -1; // 0-indexed
+}
+
+function importXLVert(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'binary' });
+      const result = parseXLVert(wb);
+      _vertImport = result.data;
+      document.getElementById('vert-import-result').innerHTML = result.msgs.join('<br>');
+      document.getElementById('vert-import-preview').innerHTML = result.preview;
+      document.getElementById('vert-apply-btn').disabled = result.count === 0;
+      openOv('vert-import-ov');
+    } catch(err) { toast(`⚠ 파일 읽기 실패: ${err.message}`, 4000); }
+    input.value = '';
+  };
+  reader.readAsBinaryString(file);
+}
+
+function parseXLVert(wb) {
+  const PID_COLS  = ['과제ID','프로젝트ID','과제번호','사업번호','과제코드'];
+  const EID_COLS  = ['직원ID','사원ID','사원번호','직원번호','사원코드'];
+  const MON_COLS  = ['월','월번호','month','Month'];
+  const RATE_COLS = ['참여율','참여율%','rate','Rate','비율'];
+  const ROLE_COLS = ['역할','role','Role'];
+
+  // 첫 번째 시트 또는 '참여율' 시트 우선
+  const sheetName = wb.SheetNames.includes('참여율') ? '참여율'
+    : wb.SheetNames.find(n => n.includes('참여') || n.includes('rate') || n.includes('Rate'))
+    || wb.SheetNames[0];
+  const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: '' });
+
+  const participation = {}; // eid → pid → [12 months]
+  let count = 0, skipped = 0;
+  const warns = [];
+
+  for (const r of rows) {
+    const pid  = resolveCol(r, PID_COLS);
+    const eid  = resolveCol(r, EID_COLS);
+    const mIdx = parseMonth(resolveCol(r, MON_COLS));
+    const rate = parseFloat(resolveCol(r, RATE_COLS)) || 0;
+    const role = resolveCol(r, ROLE_COLS) || '공동';
+
+    if (!pid || !eid) { skipped++; continue; }
+    if (mIdx < 0) {
+      warns.push(`월 인식 실패: [${pid}/${eid}] 월=${resolveCol(r, MON_COLS)}`);
+      skipped++; continue;
+    }
+
+    if (!participation[eid]) participation[eid] = {};
+    if (!participation[eid][pid]) participation[eid][pid] = Array.from({length:12}, () => ({rate:0, role:'공동'}));
+    participation[eid][pid][mIdx] = { rate, role };
+    count++;
+  }
+
+  // 프리뷰 테이블 (최대 30행)
+  const pairMap = {};
+  for (const eid of Object.keys(participation))
+    for (const pid of Object.keys(participation[eid])) {
+      const key = `${eid}||${pid}`;
+      if (!pairMap[key]) pairMap[key] = { eid, pid, months: participation[eid][pid] };
+    }
+  const pairs = Object.values(pairMap);
+  const preview = pairs.length === 0 ? '' : `
+  <div style="font-size:11px;font-weight:600;color:var(--tx3);margin-bottom:6px">미리보기 (${pairs.length}개 직원-과제 조합)</div>
+  <div class="tbl-wrap">
+  <table style="font-size:11px">
+    <thead><tr><th>직원ID</th><th>과제ID</th><th>역할</th>${MN.map(m=>`<th class="r">${m.replace('월','')}</th>`).join('')}</tr></thead>
+    <tbody>${pairs.slice(0,30).map(({eid,pid,months})=>{
+      const empName = S.employees.find(e=>e.id===eid)?.name||'';
+      const projName = S.projects.find(p=>p.id===pid)?.name||'';
+      const role = months.find(m=>m.role&&m.role!=='공동')?.role||months[0]?.role||'공동';
+      return `<tr>
+        <td class="name">${eid}${empName?` <span style="color:var(--tx3)">(${empName})</span>`:''}</td>
+        <td style="color:var(--tx2)">${pid}${projName?` <span style="color:var(--tx3)">(${projName.slice(0,8)})</span>`:''}</td>
+        <td><span class="tag t-${role}" style="font-size:9px">${role}</span></td>
+        ${months.map(m=>`<td class="num ${m.rate>0?'sum-ok':''}">${m.rate>0?m.rate:''}</td>`).join('')}
+      </tr>`;
+    }).join('')}
+    ${pairs.length>30?`<tr><td colspan="${14}" style="text-align:center;color:var(--tx3)">... 외 ${pairs.length-30}개</td></tr>`:''}
+    </tbody>
+  </table></div>`;
+
+  const msgs = [
+    `<span style="color:var(--grn)">✓ 시트: ${sheetName}</span> · 전체 ${rows.length}행`,
+    `<span style="color:var(--grn)">✓ 파싱 성공</span>: ${count}개 항목 (${pairs.length}개 직원-과제 조합)`,
+    skipped > 0 ? `<span style="color:var(--amb)">⚠ 스킵</span>: ${skipped}행 (ID 또는 월 누락)` : '',
+    ...warns.slice(0,3).map(w=>`<span style="color:var(--amb)">⚠ ${w}</span>`),
+  ].filter(Boolean);
+
+  return { data: participation, msgs, preview, count };
+}
+
+async function applyVertImport() {
+  if (!_vertImport) return;
+  if (!S.participation[S.year]) S.participation[S.year] = {};
+  let added = 0;
+  for (const eid of Object.keys(_vertImport)) {
+    if (!S.participation[S.year][eid]) S.participation[S.year][eid] = {};
+    for (const pid of Object.keys(_vertImport[eid])) {
+      S.participation[S.year][eid][pid] = _vertImport[eid][pid];
+      added++;
+    }
+  }
+  _vertImport = null;
+  closeOv('vert-import-ov');
+  render();
+  toast(`✓ 세로형 참여율 적용 완료 (${added}개 직원-과제 조합)`);
+  addHistory('세로형 참여율 가져오기', `${added}개 직원-과제 조합 적용`);
+  await saveToDB();
+}
+
+function downloadVertSample() {
+  const wb = XLSX.utils.book_new();
+  const rows = [
+    ['과제ID','직원ID','역할','월','참여율'],
+    ['PRJ001','EMP001','책임',1,30],
+    ['PRJ001','EMP001','책임',2,30],
+    ['PRJ001','EMP001','책임',3,30],
+    ['PRJ001','EMP002','공동',1,20],
+    ['PRJ001','EMP002','공동',2,20],
+    ['PRJ002','EMP001','공동',1,15],
+    ['PRJ002','EMP003','공동',1,25],
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), '참여율');
+  XLSX.writeFile(wb, '세로형_참여율_샘플.xlsx');
 }
 
 // ── RATE CELL RENDERER ──────────────────────────────
@@ -2281,6 +2513,27 @@ function renderTips() {
     <div style="font-size:12px;color:var(--tx3);margin-bottom:14px">의견을 보내주시면 다음 업데이트에 반영할게요</div>
     <button class="btn btn-pri" onclick="openOv('feedback-ov')">✉ 의견 보내기</button>
   </div>`;
+}
+
+// ── 과제별 일괄입력 — 과제 선택 ──────────────
+function openBulkProjOv() {
+  const el = document.getElementById('bulk-proj-list');
+  if (!el) return;
+  if (!S.projects.length) {
+    el.innerHTML = '<div style="color:var(--tx3);text-align:center;padding:20px">등록된 과제가 없습니다</div>';
+  } else {
+    el.innerHTML = S.projects.map(proj => {
+      const cnt = S.employees.filter(e => yPart()[e.id]?.[proj.id]).length;
+      const p = pct(projAnn(proj.id), proj.budget);
+      return `<div class="sb-item" style="padding:10px 14px;border:1px solid var(--b);border-radius:8px;margin-bottom:6px;cursor:pointer"
+        onclick="closeOv('bulk-proj-ov');openBulkModal('${proj.id}')">
+        <span style="flex:1;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${proj.name}</span>
+        <span class="sb-pill pill-gray" style="margin-left:8px">${cnt}명</span>
+        <span class="sb-pill ${p>100?'pill-err':p>80?'pill-warn':'pill-ok'}" style="margin-left:4px">${p}%</span>
+      </div>`;
+    }).join('');
+  }
+  openOv('bulk-proj-ov');
 }
 
 // ── 참여율 일괄 입력 ──────────────────────────
