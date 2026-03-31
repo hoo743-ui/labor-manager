@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>COSD 사업 관리 시스템</title>
+<title>연구과제 인건비 관리 프로그램</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -271,7 +271,7 @@ input[type=range]#pop-slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
 <div id="auth-screen">
   <div class="auth-card">
     <div class="auth-logo">
-      <span class="logo-badge">COSD</span>
+      <span class="logo-badge">RMS</span>
       <span class="logo-text">사업 관리 시스템</span>
     </div>
     <div class="auth-tabs">
@@ -295,7 +295,7 @@ input[type=range]#pop-slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
       <button class="auth-btn" id="auth-submit-btn">로그인</button>
     </div>
     <div style="text-align:center;margin-top:16px;font-size:11px;color:var(--tx3)">
-      COSD 사업 관리 시스템
+      연구과제 인건비 관리
     </div>
   </div>
 </div>
@@ -306,7 +306,7 @@ input[type=range]#pop-slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
 <!-- 상단 탑바 -->
 <div class="topbar">
   <div class="logo">
-    <span class="logo-badge">COSD</span>
+    <span class="logo-badge">RMS</span>
     <span class="logo-text">사업 관리 시스템</span>
   </div>
   <nav class="nav">
@@ -316,6 +316,7 @@ input[type=range]#pop-slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
     <button class="nav-btn"    onclick="nav('salary')">급여 · 잔액</button>
     <button class="nav-btn"    onclick="nav('master')">기준 데이터</button>
     <button class="nav-btn"    onclick="nav('history')">변경 이력</button>
+    <button class="nav-btn"    onclick="nav('pivot')" style="color:var(--pur)">전체 피벗</button>
     <button class="nav-btn"    onclick="nav('tips')" style="color:var(--amb)">사용 가이드</button>
     <button class="nav-btn"    onclick="nav('admin')" id="nav-admin" style="color:var(--red);display:none">관리자</button>
   </nav>
@@ -431,7 +432,7 @@ input[type=range]#pop-slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
     </div>
     <div class="form-row"><div class="form-label">기본급 (월, 원)</div><input class="form-input mono" id="fi-esal" type="number" step="10000" placeholder="4500000"></div>
     <div class="form-row"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--tx2)">
-      <input type="checkbox" id="fi-ecosd"> COSD/특정사업 참여자 (10% 산입 제외)
+      <input type="checkbox" id="fi-ecosd"> 특정사업 참여자 (참여율 한도 별도 적용)
     </label></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeOv('emp-ov')">취소</button>
@@ -445,10 +446,17 @@ input[type=range]#pop-slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
     <div class="modal-title" id="proj-ov-t">과제 추가</div>
     <div class="form-row"><div class="form-label">과제 ID</div><input class="form-input mono" id="fi-pid" placeholder="P08"></div>
     <div class="form-row"><div class="form-label">과제명</div><input class="form-input" id="fi-pname" placeholder="○○ 연구개발 과제"></div>
+    <div class="form-row"><div class="form-label">사업구분</div><input class="form-input" id="fi-pcategory" placeholder="예: 국가R&D, 민간위탁, 기관고유 등"></div>
+    <div class="form-row"><div class="form-label">총 수행기간</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input class="form-input" id="fi-pstart" type="date" style="flex:1">
+        <span style="color:var(--tx3);font-size:12px">~</span>
+        <input class="form-input" id="fi-pend" type="date" style="flex:1">
+      </div>
+    </div>
     <div class="form-row"><div class="form-label">유형</div>
       <select class="form-input" id="fi-ptype">
         <option value="normal">일반</option>
-        <option value="cosd">COSD</option>
         <option value="special">특정사업</option>
       </select>
     </div>
@@ -568,6 +576,7 @@ const S = {
   isAdmin: false,
   currentUser: null,
   isLoading: false,
+  empView: 'pivot',
   employees: [],
   projects: [],
   participation: {},
@@ -793,7 +802,7 @@ function renderDash(){
       ${S.employees.map(emp=>{
         const eff=effRate(emp.id,m),cr=cosdRate(emp.id,m),cls=pCls(eff),sc=sCls(eff);
         return `<div class="brow"><div class="brow-head"><span class="brow-name">${emp.name} <span style="font-size:10px;color:var(--tx3)">${emp.rank}</span></span>
-          <span class="${sc}">${eff}%${cr?` +COSD${cr}%`:''}</span></div>
+          <span class="${sc}">${eff}%${cr?` +특정${cr}%`:''}</span></div>
           <div class="prog" style="height:6px"><div class="prog-bar ${cls}" style="width:${Math.min(eff,100)}%"></div></div></div>`;
       }).join('')}
     </div>
@@ -846,7 +855,7 @@ function renderProj(){
     <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px">
       <div><div style="font-size:16px;font-weight:700;margin-bottom:6px">${proj.name}</div>
         <div class="chip-row">
-          <span class="tag ${proj.type==='cosd'?'t-cosd':'t-gray'}">${proj.type==='cosd'?'COSD':proj.type==='special'?'특정사업':'일반'}</span>
+          <span class="tag ${proj.type==='special'?'t-warn':'t-gray'}">${proj.type==='cosd'?'RMS':proj.type==='special'?'특정사업':'일반'}</span>
           <span class="tag ${proj.include345?'t-ok':'t-warn'}">${proj.include345?'3책5공 포함':'3책5공 제외'}</span>
           <span class="tag ${proj.minRate>10?'t-warn':'t-gray'}">최소 ${proj.minRate}%</span>
           ${hasMinVio(pid)?'<span class="tag t-err">⚠ 최소참여율 미달</span>':''}
@@ -929,7 +938,7 @@ function renderProj(){
           const avg=Math.round(months.reduce((s,v)=>s+v.rate,0)/12);
           return `<tr>
             <td class="name">${emp.name}</td>
-            <td><span class="tag t-${role}">${role==='cosd'?'COSD':role}</span></td>
+            <td><span class="tag t-${role}">${role==='cosd'?'RMS':role}</span></td>
             ${months.map((mv,m)=>{
               const locked=isLocked(emp.id,m);
               return `<td style="padding:4px 4px;position:relative">
@@ -951,19 +960,137 @@ function renderProj(){
   </div>`;
 }
 
-// ── EMP ──
+// ── EMP (피벗 뷰) ──
 function renderEmp(){
   const eid=S.selEmp||S.employees[0]?.id;
   if(!eid)return'<div class="card">직원 없음</div>';
+
+  // 전체 피벗 뷰 (엑셀처럼)
+  const allProjs = S.projects;
+  const allEmps  = S.employees;
+
+  // 헤더: 과제별 월 컬럼
+  const projCols = allProjs.map(proj=>({proj, months: MN}));
+
+  return `
+  <!-- 탭: 전체 피벗 / 개인 상세 -->
+  <div style="display:flex;gap:8px;margin-bottom:14px;align-items:center;flex-wrap:wrap">
+    <div class="mpills">
+      <button class="mpill${S.empView!=='detail'?' on':''}" onclick="S.empView='pivot';render()" style="font-family:var(--sans)">전체 피벗</button>
+      <button class="mpill${S.empView==='detail'?' on':''}" onclick="S.empView='detail';render()" style="font-family:var(--sans)">개인 상세</button>
+    </div>
+    ${S.empView==='detail'?`<div class="mpills" style="flex-wrap:nowrap;overflow-x:auto">
+      ${allEmps.map(e=>`<button class="mpill${e.id===eid?' on':''}" onclick="selEmp('${e.id}')" style="font-family:var(--sans);white-space:nowrap">${e.name}</button>`).join('')}
+    </div>`:''}
+  </div>
+
+  ${S.empView==='detail' ? renderEmpDetail(eid) : renderEmpPivot()}`;
+}
+
+function renderEmpPivot(){
+  const allProjs = S.projects;
+  const allEmps  = S.employees;
+  if(allEmps.length===0) return'<div class="card" style="text-align:center;color:var(--tx3);padding:40px">직원을 먼저 등록해주세요</div>';
+  if(allProjs.length===0) return'<div class="card" style="text-align:center;color:var(--tx3);padding:40px">과제를 먼저 등록해주세요</div>';
+
+  return `
+  <div class="card mb14">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+      <div>
+        <div style="font-size:13px;font-weight:600">전체 참여율 현황 — ${S.year}년</div>
+        <div style="font-size:11px;color:var(--tx3);margin-top:2px">셀 클릭 → 슬라이더로 입력 · 색상: 🟢정상 🟡미달 🔴초과</div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-ghost btn-sm" onclick="openOv('bulk-proj-ov')">📋 과제별 일괄입력</button>
+      </div>
+    </div>
+    <div class="tbl-wrap" style="max-height:70vh;overflow:auto">
+      <table style="border-collapse:collapse;font-size:11px;min-width:max-content">
+        <thead>
+          <!-- 1행: 과제명 -->
+          <tr style="position:sticky;top:0;z-index:3">
+            <th rowspan="2" style="position:sticky;left:0;z-index:4;background:var(--sf2);min-width:80px;border-right:2px solid var(--b2)">직원</th>
+            <th rowspan="2" style="position:sticky;left:80px;z-index:4;background:var(--sf2);min-width:50px;border-right:2px solid var(--b2)">유효%</th>
+            ${allProjs.map(proj=>`
+              <th colspan="12" style="background:var(--sf3);text-align:center;padding:5px 8px;border-left:2px solid var(--b2);white-space:nowrap;color:var(--tx2)">
+                <span class="tag t-${proj.type==='cosd'?'cosd':proj.type==='special'?'warn':'gray'}" style="font-size:9px">${proj.type==='special'?'특':proj.type==='special'?'특':'일'}</span>
+                ${proj.name.slice(0,10)}${proj.name.length>10?'…':''}
+              </th>`).join('')}
+          </tr>
+          <!-- 2행: 월 -->
+          <tr style="position:sticky;top:29px;z-index:3">
+            ${allProjs.map(proj=>
+              MN.map((mn,mi)=>`<th style="background:var(--sf2);text-align:center;padding:4px 2px;min-width:40px;${mi===0?'border-left:2px solid var(--b2)':''};color:var(--tx3);font-weight:400">${mn.replace('월','')}</th>`).join('')
+            ).join('')}
+          </tr>
+        </thead>
+        <tbody>
+          ${allEmps.map(emp=>{
+            const eff12 = Array.from({length:12},(_,m)=>effRate(emp.id,m));
+            const maxEff = Math.max(...eff12);
+            const {chief,joint} = get345(emp.id);
+            const hasErr = maxEff>100||chief>3||joint>5;
+            return `<tr style="${hasErr?'background:rgba(240,64,96,0.04)':''}">
+              <td style="position:sticky;left:0;background:var(--sf);border-right:2px solid var(--b2);z-index:2;padding:6px 8px;white-space:nowrap">
+                <div style="font-weight:600;color:var(--tx)">${emp.name}</div>
+                <div style="font-size:10px;color:var(--tx3)">${emp.rank}</div>
+              </td>
+              <td style="position:sticky;left:80px;background:var(--sf);border-right:2px solid var(--b2);z-index:2;text-align:center;padding:4px">
+                ${Array.from({length:12},(_,m)=>{const e=effRate(emp.id,m);return`<div style="font-size:10px;font-family:var(--mono);color:${e>100?'var(--red)':e>90?'var(--amb)':'var(--grn)'};line-height:1.6">${e>0?e+'%':'-'}</div>`;}).join('')}
+              </td>
+              ${allProjs.map((proj,pi)=>{
+                const hasP = !!yPart()[emp.id]?.[proj.id];
+                return MN.map((_,m)=>{
+                  if(!hasP) return`<td style="background:rgba(255,255,255,0.01);${m===0?'border-left:2px solid var(--b2)':''}"><div style="width:40px;height:20px"></div></td>`;
+                  const rate=getRate(emp.id,proj.id,m);
+                  const role=getRole(emp.id,proj.id,m);
+                  const eff=effRate(emp.id,m);
+                  const proj2=S.projects.find(p=>p.id===proj.id);
+                  const low=rate>0&&rate<(proj2?.minRate||10);
+                  const over=eff>100&&role!=='cosd';
+                  const locked=isLocked(emp.id,m);
+                  const bg=over?'rgba(240,64,96,0.12)':low?'rgba(240,160,48,0.1)':rate>0?'rgba(46,204,135,0.07)':'';
+                  const col=over?'var(--red)':low?'var(--amb)':rate>0?'var(--grn)':'var(--tx3)';
+                  return`<td style="text-align:center;padding:2px;background:${bg};${m===0?'border-left:2px solid var(--b2)':''}">
+                    ${locked
+                      ?`<div style="font-size:11px;font-family:var(--mono);color:var(--tx3);padding:3px">🔒${rate>0?rate:'—'}</div>`
+                      :`<span class="rate-cell ${over?'rc-over':low?'rc-low':rate>0?'rc-ok':''}"
+                        onclick="openPop(event,'${emp.id}','${proj.id}',${m})"
+                        id="rc-${emp.id}-${proj.id}-${m}"
+                        style="width:40px;height:22px;font-size:11px">
+                        <span class="rate-cell-dot" style="background:${col}"></span>${rate>0?rate+'%':'—'}
+                      </span>`
+                    }
+                  </td>`;
+                }).join('');
+              }).join('')}
+            </tr>`;
+          }).join('')}
+
+          <!-- 합계 행: 과제별 월 집행예정 -->
+          <tr style="background:var(--sf2);position:sticky;bottom:0">
+            <td style="position:sticky;left:0;background:var(--sf2);border-right:2px solid var(--b2);z-index:2;padding:6px 8px;color:var(--tx3);font-size:11px">월 집행합계</td>
+            <td style="position:sticky;left:80px;background:var(--sf2);border-right:2px solid var(--b2);z-index:2"></td>
+            ${allProjs.map(proj=>
+              MN.map((_,m)=>{
+                const tot=allEmps.reduce((s,e)=>s+mExec(e.id,proj.id,m),0);
+                return`<td style="text-align:center;font-size:10px;font-family:var(--mono);color:var(--tx2);${m===0?'border-left:2px solid var(--b2)':''}">${tot>0?fmtM(tot):''}</td>`;
+              }).join('')
+            ).join('')}
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+function renderEmpDetail(eid){
   const emp=S.employees.find(e=>e.id===eid);
+  if(!emp)return'';
   const{chief,joint}=get345(eid);
   const projs=Object.keys(yPart()[eid]||{});
 
   return `
-  <div class="mpills mb14" style="gap:4px">
-    ${S.employees.map(e=>`<button class="mpill${e.id===eid?' on':''}" onclick="selEmp('${e.id}')"
-      style="font-size:11px;font-family:var(--sans);padding:4px 10px">${e.name}</button>`).join('')}
-  </div>
   <div class="card ${chief>3||joint>5?'card-err':''} mb14">
     <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
       <div style="flex:1"><div style="font-size:16px;font-weight:700;margin-bottom:6px">${emp.name}</div>
@@ -972,7 +1099,6 @@ function renderEmp(){
           ${emp.isCosd?'<span class="tag t-cosd">COSD/특정사업</span>':''}
           <span class="tag ${chief>3?'t-err':'t-ok'}">책임 ${chief}/3</span>
           <span class="tag ${joint>5?'t-err':'t-ok'}">공동 ${joint}/5</span>
-          ${emp.code?`<span class="tag t-gray" style="font-family:var(--mono)">${emp.code}</span>`:''}
         </div>
       </div>
       <div><div style="font-size:11px;color:var(--tx3)">기본급</div>
@@ -980,14 +1106,15 @@ function renderEmp(){
       </div>
     </div>
     <div class="sep"></div>
-    <div style="font-size:11px;color:var(--tx3);margin-bottom:8px">월별 유효참여율 (COSD 제외 기준 · 100% 초과 시 빨간색)</div>
+    <div style="font-size:11px;color:var(--tx3);margin-bottom:8px">월별 유효참여율</div>
     <div style="display:grid;grid-template-columns:repeat(12,1fr);gap:3px">
       ${Array.from({length:12},(_,m)=>{
-        const eff=effRate(eid,m),cr=cosdRate(eid,m),cls=pCls(eff),sc=eff>100?'var(--red)':eff>90?'var(--amb)':'var(--tx2)';
-        return `<div style="text-align:center">
+        const eff=effRate(eid,m),cr=cosdRate(eid,m);
+        const sc=eff>100?'var(--red)':eff>90?'var(--amb)':'var(--tx2)';
+        return`<div style="text-align:center">
           <div style="font-size:9px;color:var(--tx3);margin-bottom:2px">${MN[m].replace('월','')}</div>
-          <div class="prog" style="height:36px;position:relative;border-radius:3px;display:flex;flex-direction:column-reverse;background:rgba(255,255,255,0.05)">
-            <div class="prog-bar ${cls}" style="width:100%;height:${Math.min(eff,100)}%;border-radius:3px;min-height:${eff>0?2:0}px"></div>
+          <div class="prog" style="height:36px;border-radius:3px;display:flex;flex-direction:column-reverse;background:rgba(255,255,255,0.05)">
+            <div class="prog-bar ${pCls(eff)}" style="width:100%;height:${Math.min(eff,100)}%;border-radius:3px;min-height:${eff>0?2:0}px"></div>
           </div>
           <div style="font-size:10px;font-family:var(--mono);color:${sc};margin-top:2px">${eff}%</div>
           ${cr?`<div style="font-size:9px;color:var(--grn)">+${cr}</div>`:''}
@@ -1004,12 +1131,10 @@ function renderEmp(){
           const proj=S.projects.find(p=>p.id===pid);if(!proj)return'';
           const months=yPart()[eid][pid],role=months[0]?.role||'공동';
           const avg=Math.round(months.reduce((s,v)=>s+v.rate,0)/12);
-          return `<tr>
-            <td class="name" style="font-size:11px;max-width:130px;overflow:hidden;text-overflow:ellipsis">${proj.name}${!proj.include345?'<span class="tag t-warn" style="font-size:9px;margin-left:3px">제외</span>':''}</td>
-            <td><span class="tag t-${role}">${role==='cosd'?'COSD':role}</span></td>
-            ${months.map((mv,m)=>
-              `<td style="padding:5px 6px">${rateCell(eid,pid,m)}</td>`
-            ).join('')}
+          return`<tr>
+            <td class="name" style="font-size:11px;max-width:130px;overflow:hidden;text-overflow:ellipsis">${proj.name}</td>
+            <td><span class="tag t-${role}">${role==='cosd'?'RMS':role}</span></td>
+            ${months.map((mv,m)=>`<td style="padding:5px 6px">${rateCell(eid,pid,m)}</td>`).join('')}
             <td class="${sCls(avg)}">${avg}%</td>
           </tr>`;
         }).join('')}
@@ -1097,7 +1222,7 @@ function renderMaster(){
       <button class="btn btn-ghost btn-sm" onclick="openEmpOv(null)">+ 직원 추가</button>
     </div>
     <div class="tbl-wrap"><table>
-      <thead><tr><th>ID</th><th>사원코드</th><th>이름</th><th>직급</th><th class="r">기본급</th><th>COSD</th><th></th></tr></thead>
+      <thead><tr><th>ID</th><th>사원코드</th><th>이름</th><th>직급</th><th class="r">기본급</th><th>특정</th><th></th></tr></thead>
       <tbody>${S.employees.map(emp=>`<tr>
         <td style="font-family:var(--mono);color:var(--tx3);font-size:11px">${emp.id}</td>
         <td style="font-family:var(--mono);color:var(--tx3);font-size:11px">${emp.code||'-'}</td>
@@ -1118,16 +1243,19 @@ function renderMaster(){
       <button class="btn btn-ghost btn-sm" onclick="openProjOv(null)">+ 과제 추가</button>
     </div>
     <div class="tbl-wrap"><table>
-      <thead><tr><th>ID</th><th>과제명</th><th>유형</th><th class="r">예산</th><th>3책5공</th><th>최소%</th><th>소진율</th><th>최소참여율</th><th></th></tr></thead>
-      <tbody>${S.projects.map(proj=>{const p=pct(projAnn(proj.id),proj.budget),mv=hasMinVio(proj.id);return`<tr>
+      <thead><tr><th>ID</th><th>과제명</th><th>사업구분</th><th>수행기간</th><th>유형</th><th class="r">예산</th><th>3책5공</th><th>최소%</th><th>소진율</th><th></th></tr></thead>
+      <tbody>${S.projects.map(proj=>{const p=pct(projAnn(proj.id),proj.budget),mv=hasMinVio(proj.id);
+        const period = proj.startDate||proj.endDate ? `${proj.startDate||'?'} ~ ${proj.endDate||'?'}` : '-';
+        return`<tr>
         <td style="font-family:var(--mono);color:var(--tx3);font-size:11px">${proj.id}</td>
-        <td class="name" style="max-width:130px;overflow:hidden;text-overflow:ellipsis">${proj.name}</td>
-        <td>${proj.type==='cosd'?'<span class="tag t-cosd">COSD</span>':proj.type==='special'?'<span class="tag t-warn">특정</span>':'<span class="tag t-gray">일반</span>'}</td>
+        <td class="name" style="max-width:120px;overflow:hidden;text-overflow:ellipsis">${proj.name}</td>
+        <td style="color:var(--tx2);font-size:11px;max-width:80px;overflow:hidden;text-overflow:ellipsis">${proj.category||'-'}</td>
+        <td style="color:var(--tx3);font-size:11px;white-space:nowrap">${period}</td>
+        <td>${proj.type==='special'?'<span class="tag t-warn">특정</span>':'<span class="tag t-gray">일반</span>'}</td>
         <td class="num">${fmtM(proj.budget)}</td>
         <td class="ctr">${proj.include345?'<span class="tag t-ok">포함</span>':'<span class="tag t-warn">제외</span>'}</td>
         <td class="num" style="color:${proj.minRate>10?'var(--amb)':'var(--tx2)'}">${proj.minRate}%</td>
         <td><span class="${sCls(p)}">${p}%</span></td>
-        <td class="ctr">${mv?'<span class="tag t-err">⚠ 미달</span>':'<span class="tag t-ok">충족</span>'}</td>
         <td style="white-space:nowrap">
           <button class="btn btn-ghost btn-sm" onclick="openAssignModal('${proj.id}')">배정</button>
           <button class="btn btn-ghost btn-sm" style="margin-left:4px" onclick="openProjOv('${proj.id}')">편집</button>
@@ -1160,7 +1288,7 @@ function nav(v) {
   if (v === 'proj' && !S.selProj) S.selProj = S.projects[0]?.id;
   if (v === 'emp'  && !S.selEmp)  S.selEmp  = S.employees[0]?.id;
   document.querySelectorAll('.nav-btn').forEach((b, i) =>
-    b.classList.toggle('on', ['dash','proj','emp','salary','master','history','tips','admin'][i] === v)
+    b.classList.toggle('on', ['dash','proj','emp','salary','master','history','pivot','tips','admin'][i] === v)
   );
   render();
 }
@@ -1174,7 +1302,7 @@ function render() {
   if (!el) return;
   const yl = document.getElementById('year-label');
   if (yl) yl.textContent = S.year;
-  const views = { dash: renderDash, proj: renderProj, emp: renderEmp, salary: renderSalary, master: renderMaster, history: renderHistory, tips: renderTips, admin: renderAdmin };
+  const views = { dash: renderDash, proj: renderProj, emp: renderEmp, salary: renderSalary, master: renderMaster, history: renderHistory, pivot: renderPivot, tips: renderTips, admin: renderAdmin };
   const fn = views[S.view];
   if (fn) el.innerHTML = fn();
   renderSidebar();
@@ -1242,13 +1370,16 @@ function openProjOv(pid) {
   _epid = pid;
   const p = pid ? S.projects.find(x => x.id === pid) : null;
   document.getElementById('proj-ov-t').textContent = pid ? '과제 편집' : '과제 추가';
-  document.getElementById('fi-pid').value     = p?.id || autoId(S.projects, 'P');
-  document.getElementById('fi-pid').disabled  = !!pid;
-  document.getElementById('fi-pname').value   = p?.name || '';
-  document.getElementById('fi-ptype').value   = p?.type || 'normal';
-  document.getElementById('fi-pbudget').value = p?.budget || '';
-  document.getElementById('fi-pmin').value    = p?.minRate ?? 10;
-  document.getElementById('fi-p345').checked  = p?.include345 ?? true;
+  document.getElementById('fi-pid').value        = p?.id || autoId(S.projects, 'P');
+  document.getElementById('fi-pid').disabled     = !!pid;
+  document.getElementById('fi-pname').value      = p?.name || '';
+  document.getElementById('fi-pcategory').value  = p?.category || '';
+  document.getElementById('fi-pstart').value     = p?.startDate || '';
+  document.getElementById('fi-pend').value       = p?.endDate || '';
+  document.getElementById('fi-ptype').value      = p?.type || 'normal';
+  document.getElementById('fi-pbudget').value    = p?.budget || '';
+  document.getElementById('fi-pmin').value       = p?.minRate ?? 10;
+  document.getElementById('fi-p345').checked     = p?.include345 ?? true;
   openOv('proj-ov');
 }
 
@@ -1256,7 +1387,16 @@ async function saveProj() {
   const id   = document.getElementById('fi-pid').value.trim();
   const name = document.getElementById('fi-pname').value.trim();
   if (!id || !name) { toast('⚠ ID와 과제명은 필수입니다'); return; }
-  const obj = { id, name, type: document.getElementById('fi-ptype').value, budget: parseInt(document.getElementById('fi-pbudget').value)||0, minRate: parseInt(document.getElementById('fi-pmin').value)||10, include345: document.getElementById('fi-p345').checked };
+  const obj = {
+    id, name,
+    category:   document.getElementById('fi-pcategory').value.trim(),
+    startDate:  document.getElementById('fi-pstart').value || null,
+    endDate:    document.getElementById('fi-pend').value || null,
+    type:       document.getElementById('fi-ptype').value,
+    budget:     parseInt(document.getElementById('fi-pbudget').value)||0,
+    minRate:    parseInt(document.getElementById('fi-pmin').value)||10,
+    include345: document.getElementById('fi-p345').checked,
+  };
   if (_epid) { const i = S.projects.findIndex(p => p.id === _epid); if (i >= 0) S.projects[i] = obj; }
   else { if (S.projects.find(p => p.id === id)) { toast('⚠ 이미 존재하는 ID예요'); return; } S.projects.push(obj); }
   closeOv('proj-ov'); render(); toast(`✓ "${name}" ${_epid?'수정':'추가'}됨`);
@@ -1383,7 +1523,7 @@ function exportXL() {
   for (const eid of Object.keys(yPart())) for (const pid of Object.keys(yPart()[eid])) { const months=yPart()[eid][pid]; partRows.push([eid,pid,months[0]?.role||'공동',...months.map(v=>v.rate)]); }
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(partRows), '참여율');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['직원ID',...MN],...S.employees.map(e=>[e.id,...(ySal()[e.id]||Array(12).fill(null)).map(v=>v??'')])]), '급여실적');
-  XLSX.writeFile(wb, `COSD_인건비_${S.year}.xlsx`);
+  XLSX.writeFile(wb, `연구과제_인건비_${S.year}.xlsx`);
   toast('✓ 엑셀 내보내기 완료');
 }
 
@@ -1693,6 +1833,105 @@ function addHistory(action, detail) {
   if (S.history.length > 200) S.history = S.history.slice(0, 200);
 }
 
+// ── PIVOT VIEW ────────────────────────────────
+function renderPivot() {
+  const selM = S.selMonth;
+  const months = [selM]; // 기본: 현재 월만
+  
+  // 월 선택 상태 (전체 or 단일)
+  const showAll = S._pivotShowAll || false;
+  const viewMonths = showAll ? Array.from({length:12},(_,i)=>i) : [selM];
+
+  // 과제 컬럼 헤더 생성
+  const projCols = [];
+  for (const proj of S.projects) {
+    for (const m of viewMonths) {
+      projCols.push({ proj, m });
+    }
+  }
+
+  return `
+  <div class="sh">
+    <div><div class="sh-t">전체 피벗 뷰</div><div class="sh-sub">직원 × 과제 × 월 참여율 한눈에 보기</div></div>
+    <div style="display:flex;gap:6px;align-items:center">
+      <button class="btn btn-ghost btn-sm ${!showAll?'on':''}" onclick="S._pivotShowAll=false;render()" style="${!showAll?'color:var(--acc);border-color:var(--acc)':''}">현재 월만</button>
+      <button class="btn btn-ghost btn-sm ${showAll?'on':''}" onclick="S._pivotShowAll=true;render()" style="${showAll?'color:var(--acc);border-color:var(--acc)':''}">전체 12개월</button>
+      ${!showAll ? `<div class="mpills" style="margin-left:4px">${MN.map((mn,i)=>`<button class="mpill${i===selM?' on':''}" onclick="selM(${i})">${mn}</button>`).join('')}</div>` : ''}
+    </div>
+  </div>
+
+  <div class="tbl-wrap" style="overflow-x:auto">
+    <table style="min-width:${projCols.length * 70 + 120}px">
+      <thead>
+        <!-- 과제명 행 -->
+        <tr>
+          <th rowspan="2" style="min-width:80px;position:sticky;left:0;z-index:2;background:var(--sf2)">직원</th>
+          ${S.projects.map(proj => `
+            <th colspan="${viewMonths.length}" style="text-align:center;border-left:2px solid var(--b2);background:var(--sf3);font-size:11px;max-width:${viewMonths.length*70}px;overflow:hidden;text-overflow:ellipsis" title="${proj.name}">
+              ${proj.name.slice(0,8)}${proj.name.length>8?'…':''}
+            </th>
+          `).join('')}
+          <th rowspan="2" style="text-align:center;background:var(--sf2);min-width:60px">유효<br>합계</th>
+        </tr>
+        <!-- 월 행 -->
+        <tr>
+          ${S.projects.map(proj => viewMonths.map(m => `
+            <th style="text-align:center;font-size:10px;color:var(--tx3);font-weight:400;border-left:${m===viewMonths[0]?'2px solid var(--b2)':'none'};min-width:64px">
+              ${MN[m]}
+            </th>
+          `).join('')).join('')}
+        </tr>
+      </thead>
+      <tbody>
+        ${S.employees.map(emp => {
+          const effTot = effRate(emp.id, selM);
+          const over = effTot > 100;
+          return `<tr>
+            <td style="font-weight:600;color:var(--tx);position:sticky;left:0;z-index:1;background:var(--sf);white-space:nowrap">
+              ${emp.name}
+              ${emp.isCosd ? '<span class="tag t-cosd" style="font-size:9px;margin-left:4px">C</span>' : ''}
+            </td>
+            ${S.projects.map(proj => viewMonths.map(m => {
+              const rate = getRate(emp.id, proj.id, m);
+              const role = getRole(emp.id, proj.id, m);
+              const eff = effRate(emp.id, m);
+              const low = rate > 0 && rate < proj.minRate;
+              const isOver = eff > 100 && role !== 'cosd';
+              const locked = isLocked(emp.id, m);
+              const assigned = !!yPart()[emp.id]?.[proj.id];
+              const bg = !assigned ? '' : isOver ? 'background:rgba(240,64,96,0.08)' : low ? 'background:rgba(240,160,48,0.08)' : rate > 0 ? 'background:rgba(46,204,135,0.06)' : '';
+              const borderLeft = m === viewMonths[0] ? 'border-left:2px solid var(--b2)' : '';
+              if (!assigned) return `<td style="text-align:center;color:var(--tx3);font-size:11px;${borderLeft}">-</td>`;
+              return `<td style="padding:4px;${borderLeft};${bg}">
+                ${rateCell(emp.id, proj.id, m)}
+              </td>`;
+            }).join('')).join('')}
+            <td style="text-align:center;font-family:var(--mono);font-size:12px;font-weight:600;color:${over?'var(--red)':effTot>90?'var(--amb)':effTot>0?'var(--grn)':'var(--tx3)'}">
+              ${effTot}%
+            </td>
+          </tr>`;
+        }).join('')}
+        <!-- 합계 행 -->
+        <tr style="background:var(--sf2);border-top:2px solid var(--b2)">
+          <td style="font-size:11px;color:var(--tx3);position:sticky;left:0;background:var(--sf2)">월 합계</td>
+          ${S.projects.map(proj => viewMonths.map(m => {
+            const tot = S.employees.reduce((s,e) => s + mExec(e.id, proj.id, m), 0);
+            return `<td style="text-align:right;font-size:10px;font-family:var(--mono);color:var(--tx3);padding:4px 6px;border-left:${m===viewMonths[0]?'2px solid var(--b2)':'none'}">${tot>0?fmtM(tot):'-'}</td>`;
+          }).join('')).join('')}
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div style="margin-top:12px;display:flex;gap:14px;font-size:11px;color:var(--tx3)">
+    <span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;border-radius:3px;background:rgba(46,204,135,0.15);border:1px solid rgba(46,204,135,0.3);display:inline-block"></span>참여중</span>
+    <span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;border-radius:3px;background:rgba(240,160,48,0.15);border:1px solid rgba(240,160,48,0.3);display:inline-block"></span>최소참여율 미달</span>
+    <span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;border-radius:3px;background:rgba(240,64,96,0.12);border:1px solid rgba(240,64,96,0.3);display:inline-block"></span>유효참여율 초과</span>
+    <span>셀 클릭 → 슬라이더로 수정 가능</span>
+  </div>`;
+}
+
 function renderHistory() {
   return `
   <div class="sh"><div>
@@ -1775,7 +2014,7 @@ function printPDF() {
   const totalE = S.projects.reduce((s,p)=>s+projAnn(p.id),0);
   printWin.document.write(`<!DOCTYPE html><html lang="ko"><head>
   <meta charset="UTF-8">
-  <title>COSD 사업 인건비 현황 — ${S.year}년</title>
+  <title>연구과제 인건비 현황 — ${S.year}년</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:'Noto Sans KR',sans-serif;font-size:12px;color:#111;padding:24px}
@@ -1790,7 +2029,7 @@ function printPDF() {
     .section{font-size:13px;font-weight:700;margin:16px 0 8px;padding-bottom:4px;border-bottom:2px solid #222}
     @media print{body{padding:0}}
   </style></head><body>
-  <h1>COSD 사업 인건비 참여율 현황</h1>
+  <h1>연구과제 인건비 참여율 현황</h1>
   <div class="sub">${S.year}년 기준 · 출력일시: ${new Date().toLocaleString('ko-KR')}</div>
 
   <div class="section">전체 요약</div>
@@ -1807,7 +2046,7 @@ function printPDF() {
     const exec=projAnn(proj.id), p=pct(exec,proj.budget), rem=proj.budget-exec;
     return `<tr>
       <td>${proj.name}</td>
-      <td>${proj.type==='cosd'?'COSD':proj.type==='special'?'특정':'일반'}</td>
+      <td>${proj.type==='cosd'?'RMS':proj.type==='special'?'특정':'일반'}</td>
       <td class="num">${fmt(proj.budget)}</td>
       <td class="num ${p>100?'over':'ok'}">${fmt(exec)}</td>
       <td class="num">${fmt(rem)}</td>
@@ -1861,7 +2100,7 @@ function renderTips() {
       steps: [
         '슬라이더를 드래그하거나 아래 빠른 선택 버튼(10%, 20%…)을 누르면 바로 반영',
         '팝업 아래 <b>상태 패널</b>에서 "이 직원의 이번 달 유효참여율 합계"와 "과제 잔여예산"을 실시간으로 확인 가능',
-        '역할(책임자 / 공동참여 / COSD)도 같은 팝업에서 변경 가능',
+        '역할(책임자 / 공동참여 / 특정사업)도 같은 팝업에서 변경 가능',
         '오른쪽 <b>⟳ 버튼</b>을 누르면 현재 월 값을 나머지 11개월에 한번에 복사',
       ],
       warn: '노란색 셀 = 최소참여율 미달 / 빨간색 셀 = 유효참여율 100% 초과',
@@ -1869,11 +2108,11 @@ function renderTips() {
     {
       icon: '③',
       color: 'var(--grn)',
-      title: '100% 규칙 — COSD 사업은 예외예요',
+      title: '100% 규칙 — 특정사업은 예외예요',
       desc: '직원 한 명이 여러 과제에 참여할 때 유효참여율 합계가 100%를 넘으면 안 됩니다.',
       steps: [
-        '유효참여율 = COSD/특정사업 참여율을 <b>제외한</b> 나머지 과제 참여율의 합산',
-        'COSD 사업의 10% 최소 참여율은 100% 한도에 포함되지 않아요',
+        '유효참여율 = 특정사업 참여율을 <b>제외한</b> 나머지 과제 참여율의 합산',
+        '특정사업의 참여율은 100% 한도에 포함되지 않아요',
         '직원별 참여율 탭 상단의 <b>12개 막대 그래프</b>로 월별 현황을 한눈에 확인 가능',
       ],
       warn: '대시보드 상단에 빨간 오류 숫자가 뜨면 초과된 직원이 있다는 뜻이에요',
@@ -1995,7 +2234,7 @@ function openBulkModal(pid) {
     <div style="margin-bottom:16px">
       <div style="font-size:12px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:8px">
         ${emp.name}
-        <span class="tag t-${months[0]?.role||'공동'}">${months[0]?.role==='cosd'?'COSD':months[0]?.role||'공동'}</span>
+        <span class="tag t-${months[0]?.role||'공동'}">${months[0]?.role==='cosd'?'RMS':months[0]?.role||'공동'}</span>
       </div>
       <div class="bulk-grid">
         ${MN.map((mn, m) => {
@@ -2201,6 +2440,9 @@ async function loadFromDB() {
         budget: r.budget || 0,
         include345: r.include_345 !== false,
         minRate: r.min_rate || 10,
+        category: r.category || '',
+        startDate: r.start_date || null,
+        endDate: r.end_date || null,
       }));
     }
 
@@ -2270,6 +2512,9 @@ async function saveToDB() {
       S.projects.map(p => ({
         id: p.id, name: p.name, type: p.type,
         budget: p.budget, include_345: p.include345, min_rate: p.minRate,
+        category: p.category || '',
+        start_date: p.startDate || null,
+        end_date: p.endDate || null,
       })), { onConflict: 'id' }
     );
 
