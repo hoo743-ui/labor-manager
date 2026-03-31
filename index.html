@@ -221,6 +221,16 @@ input[type=range]#pop-slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
 .skeleton{background:linear-gradient(90deg,var(--sf2) 25%,var(--sf3) 50%,var(--sf2) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:4px}
 @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
 
+/* ── 일괄입력 모달 최소화 ── */
+#bulk-ov.minimized{background:transparent;pointer-events:none;align-items:flex-end;justify-content:flex-end;padding:0 24px 24px 0}
+#bulk-ov.minimized .modal{pointer-events:all;width:300px!important;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,.6)}
+#bulk-ov.minimized .bulk-min-hide{display:none}
+#bulk-ov.minimized .bulk-min-bar{background:var(--acc2)!important;margin:0!important;padding:12px 14px!important;border-radius:0 0 10px 10px}
+
+/* ── HEATMAP ── */
+.hm-cell{width:100%;height:22px;border-radius:3px;cursor:default;transition:opacity .1s}
+.hm-cell:hover{opacity:.7}
+
 /* ── MISC ── */
 ::-webkit-scrollbar{width:10px;height:10px}
 ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.25);border-radius:99px}
@@ -506,6 +516,13 @@ input[type=range]#pop-slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
         <span style="font-size:11px;color:var(--tx3)">일반 10% / 특정과제 20%</span>
       </div>
     </div>
+    <div class="form-row">
+      <div class="form-label">과제책임자 (PI)</div>
+      <select class="form-input" id="fi-ppi">
+        <option value="">— 미지정 (참여 시 공동연구원으로 카운트) —</option>
+      </select>
+      <div style="font-size:10px;color:var(--tx3);margin-top:4px">책임자로 지정된 연구원은 3책에 자동 카운트됩니다</div>
+    </div>
     <div class="form-row"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--tx2)">
       <input type="checkbox" id="fi-p345" checked> 3책5공 카운팅에 포함
     </label></div>
@@ -578,14 +595,27 @@ input[type=range]#pop-slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
 
 <!-- 참여율 일괄 입력 모달 -->
 <div class="overlay" id="bulk-ov">
-  <div class="modal" style="width:520px">
-    <div class="modal-title" id="bulk-ov-title">참여율 일괄 입력</div>
-    <div style="font-size:12px;color:var(--tx3);margin-bottom:14px">월별로 참여율을 한번에 입력하세요. 비워두면 현재 값이 유지됩니다.</div>
-    <div id="bulk-ov-body"></div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeOv('bulk-ov')">취소</button>
+  <div class="modal" style="width:520px;padding:0;overflow:hidden">
+    <!-- 타이틀바 (최소화 상태에서도 표시) -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 18px 14px;background:var(--sf2);border-bottom:1px solid var(--b)" class="bulk-min-bar">
+      <div style="font-size:14px;font-weight:700" id="bulk-ov-title">참여율 일괄 입력</div>
+      <div style="display:flex;gap:4px">
+        <button id="bulk-min-btn" onclick="toggleBulkMinimize()"
+          style="width:24px;height:24px;border-radius:5px;border:1px solid var(--b2);background:var(--sf3);color:var(--tx2);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1"
+          title="최소화">—</button>
+        <button onclick="closeOv('bulk-ov')"
+          style="width:24px;height:24px;border-radius:5px;border:1px solid var(--b2);background:var(--sf3);color:var(--tx2);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1"
+          title="닫기">×</button>
+      </div>
+    </div>
+    <!-- 본문 (최소화 시 숨김) -->
+    <div class="bulk-min-hide" style="padding:16px 18px 0">
+      <div style="font-size:12px;color:var(--tx3);margin-bottom:14px">월별로 참여율을 한번에 입력하세요. 비워두면 현재 값이 유지됩니다.</div>
+      <div id="bulk-ov-body"></div>
+    </div>
+    <div class="modal-actions bulk-min-hide" style="padding:12px 18px 14px">
       <button class="btn btn-ghost" onclick="bulkFill()" style="color:var(--acc)">전체 동일하게</button>
-      <button class="btn btn-pri"   onclick="saveBulk()">저장</button>
+      <button class="btn btn-pri" onclick="saveBulk()">저장</button>
     </div>
   </div>
 </div>
@@ -727,19 +757,12 @@ function get345(e) {
   for (const p of Object.keys(yPart()[e] ?? {})) {
     const proj = S.projects.find(x => x.id === p);
     if (!proj?.include345) continue;
-    const months = yPart()[e][p];
-    // 참여율 > 0인 달 중 non-cosd 역할 우선 결정 (책임 최우선)
-    let r = '';
-    for (let m2 = 0; m2 < 12; m2++) {
-      const mr = months[m2]?.role || '';
-      if ((months[m2]?.rate ?? 0) > 0 && mr !== 'cosd') {
-        if (mr === '책임') { r = '책임'; break; }
-        if (!r) r = mr || '공동';
-      }
-    }
-    if (!r) r = months[0]?.role || '';
-    if (r === '책임') c++;
-    else if (r === '공동') j++;
+    // 참여율 > 0인 달이 하나라도 있으면 카운트 (cosd 제외)
+    const hasParticipation = yPart()[e][p].some(m => (m?.rate ?? 0) > 0 && m?.role !== 'cosd');
+    if (!hasParticipation) continue;
+    // 과제책임자(PI)로 지정된 경우 → 책임, 아니면 공동
+    if (proj.piId === e) c++;
+    else j++;
   }
   return { chief: c, joint: j };
 }
@@ -1023,6 +1046,57 @@ function renderProj(){
           ${Array.from({length:12},(_,m)=>{const tot=participants.reduce((s,e)=>s+mExec(e.id,pid,m),0);return`<td class="num" style="color:var(--tx2)">${tot>0?fmt(tot):'-'}</td>`;}).join('')}<td></td><td></td></tr>
       </tbody>
     </table></div>
+  </div>
+
+  <!-- 적정 인건비 산출 테이블 -->
+  <div class="card mb14">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div>
+        <div style="font-size:13px;font-weight:600">적정 인건비 산출 <span style="font-size:10px;font-weight:400;color:var(--tx3)">(실제 급여 × 참여율)</span></div>
+        <div style="font-size:11px;color:var(--tx3);margin-top:2px">급여·잔액 탭에서 확정 급여를 입력할수록 계산이 정확해집니다</div>
+      </div>
+    </div>
+    <div class="tbl-wrap"><table style="font-size:11px">
+      <thead><tr>
+        <th>직원</th><th>역할</th>
+        ${MN.map(mn=>`<th class="r">${mn}</th>`).join('')}
+        <th class="r">연간 합계</th>
+      </tr></thead>
+      <tbody>
+        ${participants.map(emp=>{
+          const proj2=S.projects.find(p=>p.id===pid);
+          const isPI = proj2?.piId === emp.id;
+          const annual = Array.from({length:12},(_,m)=>mExec(emp.id,pid,m)).reduce((s,v)=>s+v,0);
+          return `<tr>
+            <td class="name" style="white-space:nowrap">${emp.name}<span style="font-size:10px;color:var(--tx3);margin-left:4px">${emp.rank}</span></td>
+            <td><span class="tag ${isPI?'t-책임':'t-공동'}" style="font-size:10px">${isPI?'책임자':'공동참여'}</span></td>
+            ${Array.from({length:12},(_,m)=>{
+              const r=getRate(emp.id,pid,m);
+              const sal=getSal(emp.id,m);
+              const amt=mExec(emp.id,pid,m);
+              const cfm=isCfm(emp.id,m);
+              return `<td class="num" title="${MN[m]}: 급여 ${fmt(sal)}원 × ${r}%"
+                style="color:${cfm?'var(--grn)':'var(--tx2)'};${!cfm?'opacity:0.7':''}">
+                ${amt>0?fmtM(amt):'<span style="color:var(--tx3)">-</span>'}
+                ${cfm?'<span style="font-size:8px;color:var(--grn)">✓</span>':''}
+              </td>`;
+            }).join('')}
+            <td class="num" style="font-weight:600;color:var(--acc)">${annual>0?fmt(annual)+'원':'-'}</td>
+          </tr>`;
+        }).join('')}
+        <tr style="background:var(--sf2);font-weight:600">
+          <td colspan="2" style="color:var(--tx3);font-size:11px">월 합계</td>
+          ${Array.from({length:12},(_,m)=>{
+            const tot=participants.reduce((s,e)=>s+mExec(e.id,pid,m),0);
+            return`<td class="num" style="color:var(--tx)">${tot>0?fmtM(tot):'-'}</td>`;
+          }).join('')}
+          <td class="num" style="color:var(--acc)">${fmt(participants.reduce((s,e)=>s+Array.from({length:12},(_,m)=>mExec(e.id,pid,m)).reduce((a,v)=>a+v,0),0))}원</td>
+        </tr>
+      </tbody>
+    </table></div>
+    <div style="font-size:10px;color:var(--tx3);margin-top:8px">
+      <span style="color:var(--grn)">✓ 초록색</span> = 확정 급여 기준 · 회색 = 기본급 기준 추정치 · 셀에 마우스를 올리면 상세 계산 확인
+    </div>
   </div>`;
 }
 
@@ -1056,50 +1130,135 @@ function renderEmp(){
 function renderPivotChart() {
   const allEmps = S.employees;
   if (!allEmps.length) return '';
-  return `
-  <div class="card mb14">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <div style="font-size:13px;font-weight:600">직원별 월간 유효참여율</div>
-      <div style="font-size:10px;color:var(--tx3)">
-        <span style="color:var(--grn)">■</span> 정상 &nbsp;
-        <span style="color:var(--amb)">■</span> 주의(90%+) &nbsp;
-        <span style="color:var(--red)">■</span> 초과(100%+)
-      </div>
+
+  // ── KPI 계산 ──
+  let cntOk = 0, cntWarn = 0, cntErr = 0, totalAvg = 0, totalCells = 0;
+  const empData = allEmps.map(emp => {
+    const eff12 = Array.from({length:12}, (_, m) => effRate(emp.id, m));
+    const {chief, joint} = get345(emp.id);
+    const maxE = Math.max(...eff12);
+    const hasErr  = maxE > 100 || chief > 3 || joint > 5;
+    const hasWarn = !hasErr && maxE > 90;
+    if (hasErr) cntErr++; else if (hasWarn) cntWarn++; else cntOk++;
+    eff12.forEach(e => { if (e > 0) { totalAvg += e; totalCells++; } });
+    return { emp, eff12, chief, joint, hasErr, hasWarn };
+  });
+  const avgAll = totalCells > 0 ? Math.round(totalAvg / totalCells) : 0;
+
+  // ── KPI 카드 ──
+  const kpiHtml = `
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">
+    <div class="card" style="padding:14px 16px">
+      <div class="kpi-label">총 직원</div>
+      <div class="kpi-val" style="color:var(--tx)">${allEmps.length}</div>
+      <div class="kpi-sub">관리 인원</div>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px">
-      ${allEmps.map(emp => {
-        const eff12 = Array.from({length:12}, (_, m) => effRate(emp.id, m));
-        const {chief, joint} = get345(emp.id);
-        const hasErr = Math.max(...eff12) > 100 || chief > 3 || joint > 5;
-        const hasWarn = !hasErr && Math.max(...eff12) > 90;
-        return `
-        <div style="background:var(--sf2);border-radius:8px;padding:10px 10px 8px;border:1px solid ${hasErr?'rgba(240,64,96,0.35)':hasWarn?'rgba(240,160,48,0.3)':'var(--b)'}">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
-            <div>
-              <span style="font-size:12px;font-weight:600">${emp.name}</span>
-              <span style="font-size:10px;color:var(--tx3);margin-left:5px">${emp.rank}</span>
-            </div>
-            <div style="display:flex;gap:3px">
-              <span class="tag ${chief>3?'t-err':'t-ok'}" style="font-size:9px;padding:1px 5px">책 ${chief}/3</span>
-              <span class="tag ${joint>5?'t-err':'t-ok'}" style="font-size:9px;padding:1px 5px">공 ${joint}/5</span>
-            </div>
-          </div>
-          <div style="display:flex;gap:2px;align-items:flex-end;height:32px">
-            ${eff12.map((e, m) => {
-              const h = e > 0 ? Math.max(3, Math.min(28, Math.round(e / 100 * 28))) : 2;
-              const col = e > 100 ? 'var(--red)' : e > 90 ? 'var(--amb)' : e > 0 ? 'var(--grn)' : 'rgba(255,255,255,0.07)';
-              return `<div title="${MN[m]}: ${e > 0 ? e + '%' : '미입력'}"
-                style="flex:1;height:${h}px;background:${col};border-radius:2px 2px 0 0;transition:opacity .1s;cursor:default"
-                onmouseover="this.style.opacity='.6'" onmouseout="this.style.opacity='1'"></div>`;
-            }).join('')}
-          </div>
-          <div style="display:flex;gap:2px;margin-top:3px">
-            ${eff12.map((_, m) => `<div style="flex:1;text-align:center;font-size:8px;color:var(--tx3)">${m+1}</div>`).join('')}
-          </div>
-        </div>`;
-      }).join('')}
+    <div class="card card-ok" style="padding:14px 16px">
+      <div class="kpi-label">정상</div>
+      <div class="kpi-val" style="color:var(--grn)">${cntOk}</div>
+      <div class="kpi-sub">참여율 이상 없음</div>
+    </div>
+    <div class="card card-warn" style="padding:14px 16px">
+      <div class="kpi-label">주의</div>
+      <div class="kpi-val" style="color:var(--amb)">${cntWarn}</div>
+      <div class="kpi-sub">90% 초과 직원</div>
+    </div>
+    <div class="card card-err" style="padding:14px 16px">
+      <div class="kpi-label">오류</div>
+      <div class="kpi-val" style="color:var(--red)">${cntErr}</div>
+      <div class="kpi-sub">초과 또는 3책5공 위반</div>
     </div>
   </div>`;
+
+  // ── 히트맵 ──
+  const hmHtml = `
+  <div class="card mb14">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-size:13px;font-weight:600">월별 유효참여율 히트맵</div>
+      <div style="display:flex;align-items:center;gap:8px;font-size:10px;color:var(--tx3)">
+        <span>미입력 <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:rgba(255,255,255,0.07);vertical-align:middle"></span></span>
+        <span>정상 <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--grn);vertical-align:middle"></span></span>
+        <span>주의 <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--amb);vertical-align:middle"></span></span>
+        <span>초과 <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--red);vertical-align:middle"></span></span>
+        <span style="color:var(--tx2);margin-left:4px">평균 <b style="color:var(--acc)">${avgAll}%</b></span>
+      </div>
+    </div>
+    <div class="tbl-wrap">
+      <table style="border-collapse:collapse;font-size:11px;min-width:max-content">
+        <thead>
+          <tr style="position:sticky;top:0;z-index:2">
+            <th style="background:var(--sf2);min-width:80px;position:sticky;left:0;z-index:3">직원</th>
+            <th style="background:var(--sf2);min-width:50px;text-align:center;position:sticky;left:80px;z-index:3;border-right:2px solid var(--b2)">3책5공</th>
+            ${MN.map((mn,mi) => `<th style="background:var(--sf2);text-align:center;min-width:36px;padding:6px 4px;${mi===new Date().getMonth()?'color:var(--acc)':''}">${mi+1}월</th>`).join('')}
+            <th style="background:var(--sf2);text-align:center;min-width:44px">평균</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${empData.map(({emp, eff12, chief, joint, hasErr, hasWarn}) => {
+            const filled = eff12.filter(e => e > 0).length;
+            const avg = filled > 0 ? Math.round(eff12.filter(e=>e>0).reduce((s,e)=>s+e,0)/filled) : 0;
+            return `<tr style="${hasErr?'background:rgba(240,64,96,0.04)':hasWarn?'background:rgba(240,160,48,0.03)':''}">
+              <td style="position:sticky;left:0;background:var(--sf);z-index:1;padding:5px 8px;white-space:nowrap">
+                <span style="font-weight:600">${emp.name}</span>
+                <span style="font-size:10px;color:var(--tx3);margin-left:4px">${emp.rank}</span>
+              </td>
+              <td style="position:sticky;left:80px;background:var(--sf);z-index:1;text-align:center;padding:4px 6px;border-right:2px solid var(--b2)">
+                <div style="font-size:9px;line-height:1.6">
+                  <span style="color:${chief>3?'var(--red)':'var(--tx3)'}">책 ${chief}/3</span><br>
+                  <span style="color:${joint>5?'var(--red)':'var(--tx3)'}">공 ${joint}/5</span>
+                </div>
+              </td>
+              ${eff12.map((e, mi) => {
+                const bg = e > 100 ? 'var(--red)' : e > 90 ? 'var(--amb)' : e > 0 ? 'var(--grn)' : 'rgba(255,255,255,0.06)';
+                const opacity = e > 0 ? Math.max(0.25, Math.min(1, e / 100)) : 1;
+                const textCol = e > 0 ? '#fff' : 'var(--tx3)';
+                return `<td style="padding:3px 2px;text-align:center">
+                  <div class="hm-cell" title="${emp.name} ${MN[mi]}: ${e > 0 ? e+'%' : '미입력'}"
+                    style="background:${bg};opacity:${e>0?opacity:1};font-size:10px;font-family:var(--mono);color:${textCol};display:flex;align-items:center;justify-content:center">
+                    ${e > 0 ? e : ''}
+                  </div>
+                </td>`;
+              }).join('')}
+              <td style="text-align:center;padding:4px 6px">
+                <span class="${avg>100?'sum-over':avg>90?'sum-warn':avg>0?'sum-ok':'sum-gray'}">${avg>0?avg+'%':'-'}</span>
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+  </div>`;
+
+  // ── 미니 바 차트 (기존 유지, 더 compact하게) ──
+  const barHtml = `
+  <div class="card mb14">
+    <div style="font-size:13px;font-weight:600;margin-bottom:12px">직원별 월간 막대 그래프</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
+      ${empData.map(({emp, eff12, chief, joint, hasErr, hasWarn}) => `
+      <div style="background:var(--sf2);border-radius:8px;padding:10px 10px 7px;border:1px solid ${hasErr?'rgba(240,64,96,0.35)':hasWarn?'rgba(240,160,48,0.3)':'var(--b)'}">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
+          <span style="font-size:12px;font-weight:600">${emp.name}</span>
+          <div style="display:flex;gap:3px">
+            <span class="tag ${chief>3?'t-err':'t-ok'}" style="font-size:9px;padding:1px 4px">책${chief}/3</span>
+            <span class="tag ${joint>5?'t-err':'t-ok'}" style="font-size:9px;padding:1px 4px">공${joint}/5</span>
+          </div>
+        </div>
+        <div style="display:flex;gap:2px;align-items:flex-end;height:30px">
+          ${eff12.map((e, m) => {
+            const h = e > 0 ? Math.max(3, Math.min(26, Math.round(e / 100 * 26))) : 2;
+            const col = e > 100 ? 'var(--red)' : e > 90 ? 'var(--amb)' : e > 0 ? 'var(--grn)' : 'rgba(255,255,255,0.07)';
+            return `<div title="${MN[m]}: ${e > 0 ? e + '%' : '미입력'}" class="hm-cell"
+              style="flex:1;height:${h}px;background:${col};border-radius:2px 2px 0 0;width:auto"></div>`;
+          }).join('')}
+        </div>
+        <div style="display:flex;gap:2px;margin-top:3px">
+          ${eff12.map((e, m) => `<div style="flex:1;text-align:center;font-size:8px;color:${e>100?'var(--red)':e>90?'var(--amb)':'var(--tx3)'}">${m+1}</div>`).join('')}
+        </div>
+      </div>`).join('')}
+    </div>
+  </div>`;
+
+  return kpiHtml + hmHtml + barHtml;
 }
 
 function renderEmpPivot(){
@@ -1363,15 +1522,17 @@ function renderMaster(){
       <button class="btn btn-ghost btn-sm" onclick="openProjOv(null)">+ 과제 추가</button>
     </div>
     <div class="tbl-wrap"><table>
-      <thead><tr><th>ID</th><th>과제명</th><th>사업구분</th><th>수행기간</th><th>유형</th><th class="r">예산</th><th>3책5공</th><th>최소%</th><th>소진율</th><th></th></tr></thead>
+      <thead><tr><th>ID</th><th>과제명</th><th>사업구분</th><th>수행기간</th><th>유형</th><th>과제책임자(PI)</th><th class="r">예산</th><th>3책5공</th><th>최소%</th><th>소진율</th><th></th></tr></thead>
       <tbody>${S.projects.map(proj=>{const p=pct(projAnn(proj.id),proj.budget),mv=hasMinVio(proj.id);
         const period = proj.startDate||proj.endDate ? `${proj.startDate||'?'} ~ ${proj.endDate||'?'}` : '-';
+        const piEmp = proj.piId ? S.employees.find(e=>e.id===proj.piId) : null;
         return`<tr>
         <td style="font-family:var(--mono);color:var(--tx3);font-size:11px">${proj.id}</td>
         <td class="name" style="max-width:120px;overflow:hidden;text-overflow:ellipsis">${proj.name}</td>
         <td style="color:var(--tx2);font-size:11px;max-width:80px;overflow:hidden;text-overflow:ellipsis">${proj.category||'-'}</td>
         <td style="color:var(--tx3);font-size:11px;white-space:nowrap">${period}</td>
         <td>${proj.type==='special'?'<span class="tag t-warn">특정</span>':'<span class="tag t-gray">일반</span>'}</td>
+        <td style="white-space:nowrap">${piEmp?`<span class="tag t-책임" style="font-size:10px">${piEmp.name}</span>`:'<span style="color:var(--tx3);font-size:11px">미지정</span>'}</td>
         <td class="num">${fmtM(proj.budget)}</td>
         <td class="ctr">${proj.include345?'<span class="tag t-ok">포함</span>':'<span class="tag t-warn">제외</span>'}</td>
         <td class="num" style="color:${proj.minRate>10?'var(--amb)':'var(--tx2)'}">${proj.minRate}%</td>
@@ -1509,6 +1670,10 @@ function openProjOv(pid) {
   document.getElementById('fi-pbudget').value    = p?.budget || '';
   document.getElementById('fi-pmin').value       = p?.minRate ?? 10;
   document.getElementById('fi-p345').checked     = p?.include345 ?? true;
+  // PI 드롭다운 동적 로드
+  const piSel = document.getElementById('fi-ppi');
+  piSel.innerHTML = `<option value="">— 미지정 (참여 시 공동연구원으로 카운트) —</option>`
+    + S.employees.map(e => `<option value="${e.id}" ${p?.piId===e.id?'selected':''}>${e.name} (${e.rank})</option>`).join('');
   openOv('proj-ov');
 }
 
@@ -1525,6 +1690,7 @@ async function saveProj() {
     budget:     parseInt(document.getElementById('fi-pbudget').value)||0,
     minRate:    parseInt(document.getElementById('fi-pmin').value)||10,
     include345: document.getElementById('fi-p345').checked,
+    piId:       document.getElementById('fi-ppi').value || null,
   };
   if (_epid) { const i = S.projects.findIndex(p => p.id === _epid); if (i >= 0) S.projects[i] = obj; }
   else { if (S.projects.find(p => p.id === id)) { toast('⚠ 이미 존재하는 ID예요'); return; } S.projects.push(obj); }
@@ -2539,8 +2705,21 @@ function openBulkProjOv() {
 // ── 참여율 일괄 입력 ──────────────────────────
 let _bulkPid = null;
 
+function toggleBulkMinimize() {
+  const ov  = document.getElementById('bulk-ov');
+  const btn = document.getElementById('bulk-min-btn');
+  ov.classList.toggle('minimized');
+  btn.textContent = ov.classList.contains('minimized') ? '□' : '—';
+  btn.title       = ov.classList.contains('minimized') ? '복원' : '최소화';
+}
+
 function openBulkModal(pid) {
   _bulkPid = pid;
+  // 열 때마다 최소화 해제
+  const ov = document.getElementById('bulk-ov');
+  ov.classList.remove('minimized');
+  const btn = document.getElementById('bulk-min-btn');
+  if (btn) { btn.textContent = '—'; btn.title = '최소화'; }
   const proj = S.projects.find(p => p.id === pid);
   const participants = S.employees.filter(e => yPart()[e.id]?.[pid]);
   document.getElementById('bulk-ov-title').textContent = `참여율 일괄 입력 — ${proj?.name}`;
