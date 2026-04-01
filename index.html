@@ -492,7 +492,11 @@ input[type=range]#pop-slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
       </select>
     </div>
     <div class="form-row"><div class="form-label">기본급 (월, 원)</div><input class="form-input mono" id="fi-esal" type="number" step="10000" placeholder="4500000"></div>
-    <div class="form-row"><div class="form-label">입사일 <span style="color:var(--tx3);font-size:10px">(퇴직금 추계 기준)</span></div><input class="form-input mono" id="fi-ehire" type="month" placeholder="2022-03"></div>
+    <div class="form-row">
+      <div class="form-label">입사일 <span style="color:var(--tx3);font-size:10px">(퇴직금 추계 기준)</span></div>
+      <input class="form-input mono" id="fi-ehire" type="month" placeholder="2022-03" oninput="updateHireHelper()">
+      <div id="hire-helper" style="margin-top:5px;font-size:11px;line-height:1.6;padding:6px 8px;border-radius:5px;display:none"></div>
+    </div>
     <div class="form-row"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--tx2)">
       <input type="checkbox" id="fi-ecosd"> 특정사업 참여자 (참여율 한도 별도 적용)
     </label></div>
@@ -688,6 +692,11 @@ const S = {
   projects: [],
   participation: {},
   salary: {},
+  insRates: (() => {
+    const def = { pension:4.75, health:3.595, ltcRate:12.95, employment:1.15, accident:0.956 };
+    try { const s = localStorage.getItem('cosd-ins-rates'); return s ? {...def,...JSON.parse(s)} : def; } catch(_) { return def; }
+  })(),
+  insRatesOpen: false,
 };
 
 // ── HELPERS ────────────────────────────────────
@@ -796,23 +805,18 @@ function get345(e) {
 function mExec(e, p, m) { return Math.round(getSal(e, m) * getRate(e, p, m) / 100); }
 
 // ── 최대 지급 가능 인건비 계산 ──────────────────────────
-const INS = {
-  pension:    0.0475,   // 국민연금
-  health:     0.03595,  // 건강보험
-  ltcRate:    0.1295,   // 장기요양 (건강보험 금액의 12.95%)
-  employment: 0.0115,   // 고용보험
-  accident:   0.00956,  // 산재보험
-};
+// 4대보험 요율은 S.insRates (%) 에서 읽음 — 급여 관리 탭에서 수정 가능
 
 // 사업자 부담 4대보험 합계
 function calcInsurance(salary) {
-  const health = salary * INS.health;
+  const r = S.insRates;
+  const health = salary * (r.health / 100);
   return Math.round(
-    salary * INS.pension +
+    salary * (r.pension / 100) +
     health +
-    health * INS.ltcRate +
-    salary * INS.employment +
-    salary * INS.accident
+    health * (r.ltcRate / 100) +
+    salary * (r.employment / 100) +
+    salary * (r.accident / 100)
   );
 }
 
@@ -824,7 +828,39 @@ function calcRetirement(eid, salary, year, month) {
   const hireMonths = hy * 12 + (hm - 1);
   const curMonths  = year  * 12 + month;
   if (curMonths - hireMonths < 12) return 0;  // 1년 미만 제외
-  return Math.round(salary / 12);
+  return Math.round((salary + calcInsurance(salary)) / 12);  // (급여 + 4대보험 사업장 부담금) / 12
+}
+
+function updateHireHelper() {
+  const val = document.getElementById('fi-ehire').value;
+  const el  = document.getElementById('hire-helper');
+  if (!el) return;
+  if (!val) { el.style.display = 'none'; return; }
+  const [hy, hm] = val.split('-').map(Number);
+  // 퇴직금 시작 = 입사월 + 12개월
+  const startTotalM = hy * 12 + (hm - 1) + 12;
+  const startY = Math.floor(startTotalM / 12);
+  const startM = (startTotalM % 12) + 1;
+  // 현재 기준 남은 개월
+  const now = new Date();
+  const nowTotal = now.getFullYear() * 12 + now.getMonth(); // 0-based month
+  const hireTotal = hy * 12 + (hm - 1);
+  const diff = nowTotal - hireTotal;
+  let statusHtml;
+  if (diff < 0) {
+    statusHtml = `<span style="color:var(--amb)">⚠ 미래 입사일입니다</span>`;
+  } else if (diff < 12) {
+    const remain = 12 - diff;
+    statusHtml = `<span style="color:var(--amb)">⏳ 퇴직금 적용까지 <b>${remain}개월</b> 남음</span><br>`
+               + `<span style="color:var(--tx3)">적용 시작: ${startY}년 ${startM}월부터</span>`;
+  } else {
+    statusHtml = `<span style="color:var(--grn)">✓ 퇴직금 적용 중</span><br>`
+               + `<span style="color:var(--tx3)">적용 시작: ${startY}년 ${startM}월 / 근속 ${Math.floor(diff/12)}년 ${diff%12}개월</span>`;
+  }
+  el.style.display = '';
+  el.style.background = diff < 12 ? 'rgba(240,160,48,0.07)' : 'rgba(46,204,135,0.07)';
+  el.style.border = diff < 12 ? '1px solid rgba(240,160,48,0.2)' : '1px solid rgba(46,204,135,0.2)';
+  el.innerHTML = statusHtml;
 }
 
 // 최대 지급 가능 금액 (급여확정 월만, 과제별 참여율 적용)
@@ -840,15 +876,16 @@ function mMaxExec(eid, pid, m) {
 
 // 4대보험 상세 내역 (팝업 표시용)
 function insDetail(salary) {
-  const health = salary * INS.health;
-  const ltc    = health * INS.ltcRate;
+  const r = S.insRates;
+  const health = salary * (r.health / 100);
+  const ltc    = health * (r.ltcRate / 100);
   return {
-    pension:    Math.round(salary * INS.pension),
+    pension:    Math.round(salary * (r.pension / 100)),
     health:     Math.round(health),
     ltc:        Math.round(ltc),
-    employment: Math.round(salary * INS.employment),
-    accident:   Math.round(salary * INS.accident),
-    total:      Math.round(salary * INS.pension + health + ltc + salary * INS.employment + salary * INS.accident),
+    employment: Math.round(salary * (r.employment / 100)),
+    accident:   Math.round(salary * (r.accident / 100)),
+    total:      Math.round(salary * (r.pension / 100) + health + ltc + salary * (r.employment / 100) + salary * (r.accident / 100)),
   };
 }
 
@@ -1529,9 +1566,84 @@ function renderEmpDetail(eid){
 }
 
 // ── SALARY ──
+function saveInsRates() {
+  const fields = ['pension','health','ltcRate','employment','accident'];
+  fields.forEach(k => {
+    const el = document.getElementById('ins-' + k);
+    if (el) S.insRates[k] = parseFloat(el.value) || 0;
+  });
+  try { localStorage.setItem('cosd-ins-rates', JSON.stringify(S.insRates)); } catch(_) {}
+  render();
+  toast('✓ 요율 저장됨 — 재계산 완료');
+}
+
+function resetInsRates() {
+  S.insRates = { pension:4.75, health:3.595, ltcRate:12.95, employment:1.15, accident:0.956 };
+  try { localStorage.removeItem('cosd-ins-rates'); } catch(_) {}
+  render();
+  toast('요율 기본값으로 초기화됨');
+}
+
 function renderSalary(){
   const pid = S.selSalProj || S.projects[0]?.id;
   const proj = S.projects.find(p => p.id === pid);
+
+  // ── 4대보험 요율 편집 패널 ──
+  const r = S.insRates;
+  const insPanel = `
+  <div class="card mb14">
+    <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none"
+      onclick="S.insRatesOpen=!S.insRatesOpen;render()">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:13px;font-weight:600">4대보험 사업장 요율</span>
+        <span style="font-size:10px;color:var(--tx3);background:var(--sf2);padding:2px 7px;border-radius:4px">최대 지급 가능액 계산 기준</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:11px;color:var(--tx3)">${S.insRatesOpen?'접기':'펼치기'}</span>
+        <span style="color:var(--tx3);font-size:14px">${S.insRatesOpen?'▲':'▼'}</span>
+      </div>
+    </div>
+    ${S.insRatesOpen ? `
+    <div style="margin-top:14px">
+      <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">
+        매년 고시 요율에 맞게 수정하세요. 저장하면 즉시 재계산됩니다.
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:12px">
+        ${[
+          {key:'pension',    label:'국민연금',   note:'급여 기준'},
+          {key:'health',     label:'건강보험',   note:'급여 기준'},
+          {key:'ltcRate',    label:'장기요양',   note:'건강보험료 기준'},
+          {key:'employment', label:'고용보험',   note:'급여 기준'},
+          {key:'accident',   label:'산재보험',   note:'급여 기준'},
+        ].map(f=>`
+          <div style="background:var(--sf2);border:1px solid var(--b);border-radius:8px;padding:10px 12px">
+            <div style="font-size:11px;font-weight:600;color:var(--tx2);margin-bottom:2px">${f.label}</div>
+            <div style="font-size:9px;color:var(--tx3);margin-bottom:6px">${f.note}</div>
+            <div style="display:flex;align-items:center;gap:4px">
+              <input id="ins-${f.key}" type="number" step="0.001" min="0" max="30"
+                value="${r[f.key]}"
+                style="width:100%;background:var(--sf3);border:1px solid var(--b2);border-radius:5px;color:var(--tx);font-family:var(--mono);font-size:12px;padding:4px 6px;text-align:right">
+              <span style="font-size:11px;color:var(--tx3);flex-shrink:0">%</span>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;border-top:1px solid var(--b);padding-top:10px">
+        <button class="btn btn-pri btn-sm" onclick="saveInsRates()">저장 · 재계산</button>
+        <button class="btn btn-ghost btn-sm" onclick="resetInsRates()">기본값으로 초기화</button>
+        <span style="font-size:10px;color:var(--tx3);margin-left:4px">
+          현재: 연금${r.pension}% · 건강${r.health}% · 장기요양${r.ltcRate}%(건강보험료의) · 고용${r.employment}% · 산재${r.accident}%
+        </span>
+      </div>
+    </div>` : `
+    <div style="font-size:11px;color:var(--tx3);margin-top:6px">
+      연금 <b style="color:var(--tx2)">${r.pension}%</b> &nbsp;·&nbsp;
+      건강 <b style="color:var(--tx2)">${r.health}%</b> &nbsp;·&nbsp;
+      장기요양 <b style="color:var(--tx2)">${r.ltcRate}%</b>(건강보험료의) &nbsp;·&nbsp;
+      고용 <b style="color:var(--tx2)">${r.employment}%</b> &nbsp;·&nbsp;
+      산재 <b style="color:var(--tx2)">${r.accident}%</b>
+    </div>`}
+  </div>`;
 
   // ── 직원별 월급여 (접기/펼치기) ──
   const salSection = `
@@ -1572,7 +1684,7 @@ function renderSalary(){
   </div>`;
 
   // ── 과제 선택 탭 ──
-  if (!S.projects.length) return salSection + `<div class="card" style="text-align:center;color:var(--tx3);padding:40px">등록된 과제가 없습니다</div>`;
+  if (!S.projects.length) return insPanel + salSection + `<div class="card" style="text-align:center;color:var(--tx3);padding:40px">등록된 과제가 없습니다</div>`;
 
   const projTabs = `
   <div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:14px">
@@ -1607,7 +1719,7 @@ function renderSalary(){
     <!-- 선택 과제 상세 (오른쪽) -->
     <div style="flex:1;min-width:0" id="sal-detail-wrap">`;
 
-  if (!proj) return salSection + projTabs + `<div style="color:var(--tx3);padding:40px;text-align:center">과제를 선택하세요</div></div></div>`;
+  if (!proj) return insPanel + salSection + projTabs + `<div style="color:var(--tx3);padding:40px;text-align:center">과제를 선택하세요</div></div></div>`;
 
   // ── 선택 과제 상세 ──
   const ann=projAnn(proj.id), p=pct(ann,proj.budget);
@@ -1699,6 +1811,7 @@ function renderSalary(){
       <div style="font-size:11px;color:var(--tx3);margin-top:2px">확정 급여 입력 → 과제별 잔여예산 실시간 반영</div>
     </div>
   </div>
+  ${insPanel}
   ${salSection}
   ${projTabs}
     ${kpi}
@@ -1848,6 +1961,7 @@ function openEmpOv(eid) {
   document.getElementById('fi-esal').value    = e?.baseSalary || '';
   document.getElementById('fi-ehire').value   = e?.hireDate || '';
   document.getElementById('fi-ecosd').checked = e?.isCosd || false;
+  updateHireHelper();
   openOv('emp-ov');
 }
 
@@ -2367,7 +2481,7 @@ function popSlide(val, commit = true) {
     document.getElementById('ps-max-detail').innerHTML =
       `급여 ${fmtM(cfmSal)} + 4대보험 ${fmtM(ins.total)}` +
       `<span style="font-size:9px;color:var(--tx3)"> (연금${fmtM(ins.pension)}·건강${fmtM(ins.health)}·장기요양${fmtM(ins.ltc)}·고용${fmtM(ins.employment)}·산재${fmtM(ins.accident)})</span>` +
-      (ret > 0 ? ` + 퇴직금 ${fmtM(ret)}` : hasHire ? ' <span style="color:var(--tx3)">(입사 1년 미만 — 퇴직금 미포함)</span>' : ' <span style="color:var(--amb)">⚠ 입사일 미입력</span>') +
+      (ret > 0 ? ` + 퇴직금 ${fmtM(ret)}<span style="font-size:9px;color:var(--tx3)"> ((급여+4대보험)÷12)</span>` : hasHire ? ' <span style="color:var(--tx3)">(입사 1년 미만 — 퇴직금 미포함)</span>' : ' <span style="color:var(--amb)">⚠ 입사일 미입력</span>') +
       ` × ${val}%`;
     maxWrap.style.display = '';
   } else {
