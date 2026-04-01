@@ -3286,6 +3286,8 @@ db.auth.onAuthStateChange(async (event, session) => {
 
     if (event === 'SIGNED_IN') {
       addHistory('로그인', session.user.email);
+    }
+    if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') {
       await loadFromDB();
       subscribeRealtime();
     }
