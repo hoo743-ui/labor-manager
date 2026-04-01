@@ -635,16 +635,23 @@ input[type=range]#pop-slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
 // ── CONFIG ──────────────────────────────────────
 const SUPA_URL = 'https://suunsnhegngvjuoguiie.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1dW5zbmhlZ25ndmp1b2d1aWllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3NzE5OTMsImV4cCI6MjA5MDM0Nzk5M30.fPXAQm1897s5FgrM7bri6ugZ1BCHWmOlSTEyyxhfCMU';
+
+// 탭마다 고유 ID → storageKey 분리로 잠금 충돌 방지
+const TAB_ID = sessionStorage.getItem('tab-id') || (() => {
+  const id = Math.random().toString(36).slice(2, 8);
+  sessionStorage.setItem('tab-id', id);
+  return id;
+})();
+
 const db = supabase.createClient(SUPA_URL, SUPA_KEY, {
   auth: {
-    storageKey: 'cosd-auth',
-    storage: window.localStorage,
+    storageKey: 'cosd-auth-' + TAB_ID,   // 탭별 독립 잠금 키
+    storage: window.sessionStorage,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
   }
 });
-const TAB_ID = Math.random().toString(36).slice(2, 8);
 
 const MN = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
 
@@ -3353,6 +3360,11 @@ db.auth.onAuthStateChange(async (event, session) => {
   }
 })();
 
+
+// localStorage에 남은 구버전 auth 잔여 키 정리 (1회성)
+try {
+  Object.keys(localStorage).filter(k => k.startsWith('cosd-auth')).forEach(k => localStorage.removeItem(k));
+} catch(e) {}
 
 // 인증 버튼 이벤트 연결
 document.addEventListener('DOMContentLoaded', () => {
