@@ -2727,141 +2727,191 @@ function renderTips() {
     {
       icon: '①',
       color: 'var(--acc)',
-      title: '처음 시작할 때 — 기준 데이터부터 입력하세요',
-      desc: '상단 <b>기준 데이터</b> 탭에서 직원과 과제를 먼저 등록해야 다른 기능을 쓸 수 있어요.',
+      title: '처음 시작 — 이 순서대로 하면 됩니다',
+      desc: '기준 데이터 등록 → 참여율 입력 → 급여 입력 순으로 진행하면 모든 계산이 자동으로 됩니다.',
       steps: [
-        '기준 데이터 → <b>+ 직원 추가</b> 버튼으로 직원 등록 (이름, 직급, 기본급 입력)',
-        '기준 데이터 → <b>+ 과제 추가</b> 버튼으로 과제 등록 (과제명, 인건비 예산, 최소참여율 입력)',
-        '과제 목록의 <b>배정</b> 버튼으로 어떤 직원이 이 과제에 참여하는지 체크',
+        '<b>기준 데이터 탭</b> → "+ 직원 추가" 로 직원 등록 (이름·직급·기본급)',
+        '<b>기준 데이터 탭</b> → "+ 과제 추가" 로 과제 등록 (과제명·인건비 예산·최소참여율·3책5공 포함 여부)',
+        '과제 추가 시 <b>과제책임자(PI)</b>를 지정하면 3책5공 책임/공동이 자동 구분됨',
+        '과제 목록의 <b>배정 버튼</b>으로 해당 과제에 참여하는 직원을 체크',
       ],
-      warn: null,
+      warn: '직원·과제 등록 전에는 다른 탭 기능을 사용할 수 없어요.',
     },
     {
       icon: '②',
       color: 'var(--pur)',
-      title: '참여율 입력 — 셀을 클릭하면 슬라이더가 떠요',
-      desc: '<b>과제별 현황</b> 탭에서 참여율 숫자 셀을 클릭하면 슬라이더 팝업이 열립니다.',
+      title: '참여율 입력 — 셀 클릭 한 번으로 입력',
+      desc: '<b>과제별 현황</b> 또는 <b>직원별 참여율</b> 탭에서 숫자 셀을 클릭하면 슬라이더 팝업이 열립니다.',
       steps: [
-        '슬라이더를 드래그하거나 아래 빠른 선택 버튼(10%, 20%…)을 누르면 바로 반영',
-        '팝업 아래 <b>상태 패널</b>에서 "이 직원의 이번 달 유효참여율 합계"와 "과제 잔여예산"을 실시간으로 확인 가능',
-        '역할(책임자 / 공동참여 / 특정사업)도 같은 팝업에서 변경 가능',
-        '오른쪽 <b>⟳ 버튼</b>을 누르면 현재 월 값을 나머지 11개월에 한번에 복사',
+        '슬라이더 드래그 또는 하단 버튼(10% · 20% · 30%…)으로 값 입력 → 자동 저장',
+        '<b>⟳ 버튼</b>을 누르면 현재 값을 나머지 11개월에 한 번에 복사',
+        '<b>📋 일괄 입력</b> 버튼으로 한 과제의 모든 직원 참여율을 한 화면에서 한꺼번에 입력 가능',
+        '팝업 하단 상태 패널에서 해당 직원의 <b>이달 유효참여율 합계</b>와 <b>과제 잔여예산</b>을 실시간 확인',
       ],
-      warn: '노란색 셀 = 최소참여율 미달 / 빨간색 셀 = 유효참여율 100% 초과',
+      warn: '노란 셀 = 최소참여율 미달  /  빨간 셀 = 유효참여율 100% 초과',
     },
     {
       icon: '③',
-      color: 'var(--grn)',
-      title: '100% 규칙 — 특정사업은 예외예요',
-      desc: '직원 한 명이 여러 과제에 참여할 때 유효참여율 합계가 100%를 넘으면 안 됩니다.',
+      color: 'var(--amb)',
+      title: '3책5공 — 과제책임자 지정만 하면 자동 계산',
+      desc: '연구책임자는 최대 3개 과제, 공동연구원은 최대 5개 과제까지 참여할 수 있는 규정입니다.',
       steps: [
-        '유효참여율 = 특정사업 참여율을 <b>제외한</b> 나머지 과제 참여율의 합산',
-        '특정사업의 참여율은 100% 한도에 포함되지 않아요',
-        '직원별 참여율 탭 상단의 <b>12개 막대 그래프</b>로 월별 현황을 한눈에 확인 가능',
+        '과제 추가/편집 시 <b>과제책임자(PI)</b>로 지정된 직원 → 해당 과제에서 자동으로 <b>책임</b> 카운트',
+        'PI가 아닌 나머지 참여자 → 자동으로 <b>공동</b> 카운트 (별도 설정 불필요)',
+        '3책5공에 포함되지 않는 과제는 과제 추가 시 <b>"3책5공 카운팅에 포함" 체크 해제</b>',
+        '<b>직원별 참여율 탭 히트맵</b>의 "책 N/3 · 공 N/5" 뱃지로 위반 여부 즉시 확인',
+        '사이드바 직원 이름 옆 색상 표시: 🔴 빨강 = 초과, 🟡 노랑 = 90% 이상, 🟢 초록 = 정상',
       ],
-      warn: '대시보드 상단에 빨간 오류 숫자가 뜨면 초과된 직원이 있다는 뜻이에요',
+      warn: '참여율이 0%인 달은 카운트에서 제외됩니다. 참여율을 입력한 달이 1달이라도 있어야 카운트됩니다.',
     },
     {
       icon: '④',
-      color: 'var(--amb)',
-      title: '3책 5공 — 자동으로 카운팅돼요',
-      desc: '한 직원이 책임자로 참여할 수 있는 과제는 최대 3개, 공동참여는 최대 5개입니다.',
+      color: 'var(--grn)',
+      title: '유효참여율 100% 규칙 — RMS(특정사업)는 예외',
+      desc: '한 직원이 여러 과제에 참여할 때, 유효참여율 합계가 100%를 초과하면 안 됩니다.',
       steps: [
-        '기준 데이터 탭 하단 <b>3책5공 현황 요약</b>에서 직원별 초과 여부 확인',
-        '3책5공에 포함되지 않는 과제(약 10개)는 과제 추가 시 <b>"3책5공 카운팅에 포함" 체크 해제</b>',
-        '사이드바 직원 목록에서도 초과 여부를 색상으로 바로 확인 가능 (빨간색 = 초과)',
+        '<b>유효참여율</b> = RMS(특정사업) 참여율을 제외한 일반·3책5공 과제 참여율의 합산',
+        'RMS 과제는 100% 한도에 포함되지 않으므로 별도 관리 (과제 유형을 "RMS"로 설정)',
+        '<b>직원별 참여율 탭 히트맵</b>에서 월별 유효참여율을 색상으로 즉시 확인',
+        '대시보드 상단 빨간 숫자 = 100% 초과 또는 3책5공 위반 직원 수',
       ],
-      warn: null,
+      warn: '히트맵에서 빨간색 셀은 해당 월 유효참여율이 100%를 넘었다는 뜻입니다.',
     },
     {
       icon: '⑤',
       color: 'var(--acc)',
-      title: '급여 입력 — 입력할수록 계산이 정확해져요',
-      desc: '확정 급여를 입력하지 않으면 기본급으로 계산되고, 입력하면 실제 지급액 기준으로 자동 계산됩니다.',
+      title: '과제별 현황 보기 — 예산 추적',
+      desc: '<b>과제별 현황 탭</b>에서 선택한 과제의 예산 집행 현황과 월별 참여율을 확인하고 입력합니다.',
       steps: [
-        '급여·잔액 탭 → 직원 오른쪽 <b>편집</b> 버튼 → 월별 확정 급여 입력',
-        '입력한 월은 초록색, 미입력 월은 기본급(괄호)으로 표시',
-        '급여를 입력할수록 과제별 <b>"확정 후 잔여 예산"</b>이 더 정확하게 계산됨',
-        '마지막 확정 월 기준으로 "N월 이후 가용 인건비"가 자동 계산되어 표시됨',
+        '상단 <b>전체 / 3책5공 포함 / 3책5공 제외</b> 필터로 원하는 과제 그룹만 볼 수 있음',
+        '과제 카드에서 연간 집행 예정액·잔여예산·확정급여 기반 집행액을 한눈에 확인',
+        '<b>월별 집행액 표</b>에서 누적 집행액과 잔여예산 추이 확인',
+        '하단 참여율 입력 표에서 직원별·월별 참여율 직접 입력',
       ],
       warn: null,
     },
     {
       icon: '⑥',
-      color: 'var(--red)',
-      title: '참여율 잠금 — 확정된 데이터를 실수로 바꾸지 않으려면',
-      desc: '급여가 확정된 월은 잠금을 걸어두면 실수로 참여율을 수정하는 걸 막을 수 있어요.',
+      color: 'var(--grn)',
+      title: '급여 입력 — 확정 급여를 넣을수록 정확해져요',
+      desc: '확정 급여를 입력하지 않으면 기본급으로 계산되고, 입력하면 실제 지급액 기준으로 자동 계산됩니다.',
       steps: [
-        '과제별 현황 → 참여율 표 → 각 셀 오른쪽 상단 🔓 아이콘 클릭하면 잠금',
-        '<b>🔒 확정월 일괄 잠금</b> 버튼으로 급여 입력된 월 전체를 한번에 잠글 수 있어요',
-        '잠긴 셀은 수정 불가 (🔒 표시) · 다시 클릭하면 잠금 해제',
+        '<b>급여·잔액 탭</b> → 직원별 월급여 → "편집" 버튼 → 해당 월 확정 급여 입력',
+        '확정 입력 월은 초록색, 미입력 월은 기본급(회색)으로 자동 표시',
+        '확정 급여 입력 시 과제별 <b>"확정 후 잔여예산"</b>이 더 정확하게 자동 계산',
+        '마지막 확정 월 기준으로 이후 가용 인건비가 자동 표시됨',
       ],
       warn: null,
     },
     {
       icon: '⑦',
-      color: 'var(--grn)',
-      title: '데이터 저장 — 자동 저장이지만 수동 저장도 가능해요',
-      desc: '참여율 변경, 직원/과제 추가 등 모든 변경사항은 Supabase에 자동 저장됩니다.',
+      color: 'var(--red)',
+      title: '잠금 기능 — 확정 데이터 실수 수정 방지',
+      desc: '급여가 확정된 달은 잠금을 걸어두면 참여율을 실수로 바꾸는 걸 막을 수 있어요.',
       steps: [
-        '상단 상태 표시 → 💾 저장됨 / 🔄 저장 중 / 🔴 오류 로 저장 상태 확인 가능',
-        '상단 <b>💾 저장</b> 버튼으로 수동 저장 가능',
-        '엑셀로 전체 데이터를 백업하고 싶으면 상단 <b>↓ 내보내기</b> 버튼 사용',
-        '다른 기기에서 데이터를 가져오고 싶으면 내보낸 파일을 <b>↑ 불러오기</b>로 업로드',
+        '과제별 현황 → 참여율 표 → 각 셀 오른쪽 위 🔓 아이콘 클릭 → 잠금',
+        '<b>🔒 확정월 일괄 잠금</b> 버튼으로 급여 입력된 월 전체를 한 번에 잠금',
+        '잠긴 셀은 🔒 표시되며 수정 불가 · 다시 클릭하면 잠금 해제',
       ],
       warn: null,
     },
     {
       icon: '⑧',
       color: 'var(--pur)',
-      title: 'PDF 출력 — 보고서 제출용',
-      desc: '현재 연도의 전체 인건비 현황을 A4 형태로 출력할 수 있어요.',
+      title: '데이터 저장 · 동기화',
+      desc: '참여율 변경 등 모든 수정사항은 자동으로 저장됩니다. 브라우저 새로고침(F5) 대신 전용 버튼을 쓰세요.',
       steps: [
-        '상단 <b>🖨 출력</b> 버튼 클릭 → 브라우저 인쇄 창이 열림',
-        '전체 요약 + 과제별 예산 현황 + 직원별 참여 현황이 포함됨',
-        'PDF로 저장하려면 인쇄 창에서 <b>PDF로 저장</b> 선택',
+        '상단 연결 상태 표시: 🟢 연결됨 / 🔄 저장 중 / 🔴 오류',
+        '<b>🔄 새로고침 버튼</b>을 누르면 로그인 유지 상태로 최신 데이터만 다시 불러옴 (F5보다 안전)',
+        'F5나 브라우저 새로고침은 가급적 피하세요 — 연결이 끊길 수 있어요',
+        '전체 데이터 백업: 상단 <b>↓ 내보내기</b> → 엑셀 파일로 저장',
+        '엑셀에서 가져오기: <b>↑ 불러오기</b>(가로형) 또는 <b>↑ 세로형</b>(과제ID·직원ID·월·참여율 형식)',
+      ],
+      warn: null,
+    },
+    {
+      icon: '⑨',
+      color: 'var(--tx3)',
+      title: '공용 계정 (edir@kdia.org) — 읽기 전용',
+      desc: '공용 계정으로 로그인하면 대시보드·과제별 현황·직원별 참여율만 조회 가능하며, 수정은 불가합니다.',
+      steps: [
+        '공용 계정: <b>edir@kdia.org</b> / 비밀번호는 관리자에게 문의',
+        '조회 가능 탭: 대시보드, 과제별 현황, 직원별 참여율',
+        '수정·저장·급여 입력 등 모든 편집 기능은 비활성화됨',
+        '데이터 수정이 필요하면 개인 계정으로 로그인하세요',
       ],
       warn: null,
     },
   ];
 
-  return `
-  <div class="sh">
-    <div><div class="sh-t">사용 가이드</div><div class="sh-sub">처음 쓰는 분도 바로 이해할 수 있도록 정리했어요</div></div>
-    <button class="btn btn-ghost btn-sm" onclick="openOv('feedback-ov')" style="color:var(--amb)">✉ 의견 보내기</button>
-  </div>
-
-  <div class="alert alert-info mb14">
-    <span>💡</span>
-    <span>순서대로 읽지 않아도 돼요. 궁금한 항목만 골라서 확인하세요. 각 탭을 직접 눌러보면서 따라하면 더 빨리 익숙해져요.</span>
-  </div>
-
-  ${tips.map(tip=>`
+  const cardHtml = tips.map(tip=>`
   <div class="card mb14">
     <div style="display:flex;gap:14px;align-items:flex-start">
-      <div style="width:32px;height:32px;border-radius:8px;background:${tip.color};opacity:0.15;flex-shrink:0;display:flex;align-items:center;justify-content:center;position:relative">
-        <span style="position:absolute;font-size:13px;font-weight:700;color:${tip.color};opacity:1">${tip.icon}</span>
+      <div style="width:32px;height:32px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:${tip.color};opacity:0.9">
+        <span style="font-size:13px;font-weight:700;color:#fff">${tip.icon}</span>
       </div>
       <div style="flex:1">
         <div style="font-size:14px;font-weight:600;color:var(--tx);margin-bottom:5px">${tip.title}</div>
-        <div style="font-size:12px;color:var(--tx2);margin-bottom:10px;line-height:1.7">${tip.desc}</div>
+        <div style="font-size:12px;color:var(--tx2);margin-bottom:10px;line-height:1.75">${tip.desc}</div>
         <div style="display:flex;flex-direction:column;gap:6px">
           ${tip.steps.map((s,i)=>`
           <div style="display:flex;gap:10px;align-items:flex-start">
-            <span style="width:18px;height:18px;border-radius:50%;background:rgba(255,255,255,0.06);font-size:10px;color:var(--tx3);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">${i+1}</span>
-            <span style="font-size:12px;color:var(--tx2);line-height:1.7">${s}</span>
+            <span style="width:18px;height:18px;border-radius:50%;background:${tip.color};opacity:0.2;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;position:relative">
+              <span style="position:absolute;font-size:10px;font-weight:600;color:${tip.color};opacity:5">${i+1}</span>
+            </span>
+            <span style="font-size:12px;color:var(--tx2);line-height:1.75">${s}</span>
           </div>`).join('')}
         </div>
-        ${tip.warn?`<div style="margin-top:10px;padding:8px 12px;background:var(--amb2);border-radius:6px;font-size:11px;color:var(--amb)">⚠ ${tip.warn}</div>`:''}
+        ${tip.warn?`<div style="margin-top:10px;padding:8px 12px;background:rgba(240,160,48,0.08);border-left:3px solid var(--amb);border-radius:0 6px 6px 0;font-size:11px;color:var(--amb)">⚠ ${tip.warn}</div>`:''}
       </div>
     </div>
-  </div>`).join('')}
+  </div>`).join('');
 
-  <div class="card card-acc" style="text-align:center;padding:24px">
-    <div style="font-size:14px;font-weight:600;margin-bottom:8px">불편하거나 필요한 기능이 있으면 알려주세요</div>
-    <div style="font-size:12px;color:var(--tx3);margin-bottom:14px">의견을 보내주시면 다음 업데이트에 반영할게요</div>
-    <button class="btn btn-pri" onclick="openOv('feedback-ov')">✉ 의견 보내기</button>
-  </div>`;
+  return `
+  <div class="sh">
+    <div><div class="sh-t">사용 가이드</div><div class="sh-sub">연구과제 인건비 관리 프로그램 전체 기능 안내</div></div>
+  </div>
+
+  <div class="alert alert-info mb14" style="font-size:12px">
+    <span>💡</span>
+    <span>순서대로 읽지 않아도 됩니다. 궁금한 항목만 골라서 확인하세요.
+    <b style="color:var(--acc)">처음이라면 ①번부터</b> 따라하시면 5분 안에 세팅 완료됩니다.</span>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">
+    <div class="card" style="padding:12px;text-align:center;cursor:pointer" onclick="nav('master')">
+      <div style="font-size:20px;margin-bottom:4px">🗂</div>
+      <div style="font-size:12px;font-weight:600">기준 데이터</div>
+      <div style="font-size:11px;color:var(--tx3);margin-top:2px">직원·과제 등록</div>
+    </div>
+    <div class="card" style="padding:12px;text-align:center;cursor:pointer" onclick="nav('proj')">
+      <div style="font-size:20px;margin-bottom:4px">📊</div>
+      <div style="font-size:12px;font-weight:600">과제별 현황</div>
+      <div style="font-size:11px;color:var(--tx3);margin-top:2px">참여율·예산 관리</div>
+    </div>
+    <div class="card" style="padding:12px;text-align:center;cursor:pointer" onclick="nav('emp')">
+      <div style="font-size:20px;margin-bottom:4px">👥</div>
+      <div style="font-size:12px;font-weight:600">직원별 참여율</div>
+      <div style="font-size:11px;color:var(--tx3);margin-top:2px">히트맵·3책5공 확인</div>
+    </div>
+    <div class="card" style="padding:12px;text-align:center;cursor:pointer" onclick="nav('salary')">
+      <div style="font-size:20px;margin-bottom:4px">💰</div>
+      <div style="font-size:12px;font-weight:600">급여·잔액</div>
+      <div style="font-size:11px;color:var(--tx3);margin-top:2px">확정급여 입력</div>
+    </div>
+    <div class="card" style="padding:12px;text-align:center;cursor:pointer" onclick="nav('dash')">
+      <div style="font-size:20px;margin-bottom:4px">🏠</div>
+      <div style="font-size:12px;font-weight:600">대시보드</div>
+      <div style="font-size:11px;color:var(--tx3);margin-top:2px">전체 현황 요약</div>
+    </div>
+    <div class="card" style="padding:12px;text-align:center;cursor:pointer" onclick="nav('pivot')">
+      <div style="font-size:20px;margin-bottom:4px">📋</div>
+      <div style="font-size:12px;font-weight:600">전체 피벗</div>
+      <div style="font-size:11px;color:var(--tx3);margin-top:2px">직원×과제×월 한눈에</div>
+    </div>
+  </div>
+
+  ${cardHtml}`;
 }
 
 // ── 과제별 일괄입력 — 과제 선택 ──────────────
