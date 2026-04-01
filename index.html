@@ -665,6 +665,7 @@ const S = {
   selProj: null,
   selEmp: null,
   selSalProj: null,
+  projFilter: 'all',
   salEmpOpen: false,
   empSearch: '',
   year: new Date().getFullYear(),
@@ -952,10 +953,44 @@ function renderProj(){
   const lastCfm=Array.from({length:12},(_,m)=>S.employees.some(e=>yPart()[e.id]?.[pid]&&isCfm(e.id,m))).lastIndexOf(true);
   const avail=lastCfm>=0?proj.budget-cfmUpTo(pid,lastCfm+1):proj.budget;
 
+  const inclProjs = S.projects.filter(pr=>pr.include345);
+  const exclProjs = S.projects.filter(pr=>!pr.include345);
+  const visProjs  = S.projFilter==='include' ? inclProjs
+                  : S.projFilter==='exclude' ? exclProjs
+                  : S.projects;
+
   return `
-  <div class="mpills mb14" style="gap:4px">
-    ${S.projects.map(pr=>`<button class="mpill${pr.id===pid?' on':''}" onclick="selProj('${pr.id}')"
-      style="font-size:11px;font-family:var(--sans);padding:4px 10px">${pr.name.slice(0,8)}${pr.name.length>8?'…':''}</button>`).join('')}
+  <div class="card mb14" style="padding:12px 14px">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span style="font-size:11px;color:var(--tx3);white-space:nowrap">과제 보기</span>
+      <div class="mpills" style="gap:3px">
+        <button class="mpill${S.projFilter==='all'?' on':''}" onclick="S.projFilter='all';render()" style="font-size:11px">전체 (${S.projects.length})</button>
+        <button class="mpill${S.projFilter==='include'?' on':''}" onclick="S.projFilter='include';render()" style="font-size:11px;color:var(--grn)">3책5공 포함 (${inclProjs.length})</button>
+        <button class="mpill${S.projFilter==='exclude'?' on':''}" onclick="S.projFilter='exclude';render()" style="font-size:11px;color:var(--tx3)">3책5공 제외 (${exclProjs.length})</button>
+      </div>
+    </div>
+    ${S.projFilter==='all' && inclProjs.length && exclProjs.length ? `
+    <div style="margin-top:10px;display:flex;gap:12px;flex-wrap:wrap">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:10px;color:var(--grn);margin-bottom:4px;font-weight:600">3책5공 포함</div>
+        <div style="display:flex;gap:3px;flex-wrap:wrap">
+          ${inclProjs.map(pr=>`<button class="mpill${pr.id===pid?' on':''}" onclick="selProj('${pr.id}')"
+            style="font-size:11px;padding:3px 9px">${pr.name.slice(0,9)}${pr.name.length>9?'…':''}</button>`).join('')}
+        </div>
+      </div>
+      <div style="width:1px;background:var(--b2);flex-shrink:0"></div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:10px;color:var(--tx3);margin-bottom:4px;font-weight:600">3책5공 제외</div>
+        <div style="display:flex;gap:3px;flex-wrap:wrap">
+          ${exclProjs.map(pr=>`<button class="mpill${pr.id===pid?' on':''}" onclick="selProj('${pr.id}')"
+            style="font-size:11px;padding:3px 9px;opacity:0.7">${pr.name.slice(0,9)}${pr.name.length>9?'…':''}</button>`).join('')}
+        </div>
+      </div>
+    </div>` : `
+    <div style="display:flex;gap:3px;flex-wrap:wrap;margin-top:10px">
+      ${visProjs.map(pr=>`<button class="mpill${pr.id===pid?' on':''}" onclick="selProj('${pr.id}')"
+        style="font-size:11px;padding:3px 9px">${pr.name.slice(0,9)}${pr.name.length>9?'…':''}</button>`).join('')}
+    </div>`}
   </div>
   <div class="card ${p>100?'card-err':p>90?'card-warn':''} mb14">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px">
@@ -3124,6 +3159,8 @@ async function softRefresh() {
 async function loadFromDB() {
   if (_loadingInProgress) return;   // 중복 호출 차단
   _loadingInProgress = true;
+  // 15초 안에 완료 안 되면 강제 해제 (먹통 방지)
+  const _loadTimeout = setTimeout(() => { hideLoading(); _loadingInProgress = false; }, 15000);
   showLoading('데이터 불러오는 중...');
   setDbStatus('connecting');
   try {
@@ -3207,7 +3244,8 @@ async function loadFromDB() {
     toast(`⚠ ${msg}`, 5000);
     render();
   } finally {
-    hideLoading();           // 어떤 경우에도 로딩 오버레이 반드시 해제
+    clearTimeout(_loadTimeout);
+    hideLoading();
     _loadingInProgress = false;
   }
 }
@@ -3319,10 +3357,10 @@ function subscribeRealtime() {
     .subscribe();
 }
 
-// 탭이 다시 활성화될 때 데이터 동기화
+// 탭이 다시 활성화될 때 조용히 데이터만 동기화 (로딩 오버레이 없음)
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && S.currentUser) {
-    loadFromDB();
+    softRefresh();
   }
 });
 
