@@ -349,7 +349,8 @@ input[type=range]#pop-slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
       <button onclick="changeYear(1)"  style="background:none;border:none;color:var(--tx2);cursor:pointer;font-size:14px;padding:0 2px;line-height:1">›</button>
     </div>
     <span id="db-status" style="font-size:11px;font-family:var(--mono);color:var(--tx3);white-space:nowrap">🔄 연결 중...</span>
-    <button class="btn btn-ghost" style="font-size:11px" onclick="saveToDB()">💾 저장</button>
+    <button id="btn-soft-refresh" class="btn btn-ghost" style="font-size:11px" onclick="softRefresh()">🔄 새로고침</button>
+    <button class="btn btn-ghost ro-hide" style="font-size:11px" onclick="saveToDB()">💾 저장</button>
     <button class="btn btn-ghost" style="font-size:11px" onclick="printPDF()">🖨 출력</button>
     <button class="btn btn-ghost" onclick="document.getElementById('xu').click()">↑ 불러오기</button>
     <input type="file" id="xu" accept=".xlsx,.xls" style="display:none" onchange="importXL(this)">
@@ -1215,7 +1216,7 @@ function renderPivotChart() {
                 <span style="font-weight:600">${emp.name}</span>
                 <span style="font-size:10px;color:var(--tx3);margin-left:4px">${emp.rank}</span>
               </td>
-              <td style="position:sticky;left:80px;background:var(--sf);z-index:1;text-align:center;padding:4px 6px;border-right:2px solid var(--b2)">
+              <td id="hm-badge-${emp.id}" style="position:sticky;left:80px;background:var(--sf);z-index:1;text-align:center;padding:4px 6px;border-right:2px solid var(--b2)">
                 <div style="font-size:9px;line-height:1.6">
                   <span style="color:${chief>3?'var(--red)':'var(--tx3)'}">책 ${chief}/3</span><br>
                   <span style="color:${joint>5?'var(--red)':'var(--tx3)'}">공 ${joint}/5</span>
@@ -1226,14 +1227,14 @@ function renderPivotChart() {
                 const opacity = e > 0 ? Math.max(0.25, Math.min(1, e / 100)) : 1;
                 const textCol = e > 0 ? '#fff' : 'var(--tx3)';
                 return `<td style="padding:3px 2px;text-align:center">
-                  <div class="hm-cell" title="${emp.name} ${MN[mi]}: ${e > 0 ? e+'%' : '미입력'}"
+                  <div id="hm-cell-${emp.id}-${mi}" class="hm-cell" title="${emp.name} ${MN[mi]}: ${e > 0 ? e+'%' : '미입력'}"
                     style="background:${bg};opacity:${e>0?opacity:1};font-size:10px;font-family:var(--mono);color:${textCol};display:flex;align-items:center;justify-content:center">
                     ${e > 0 ? e : ''}
                   </div>
                 </td>`;
               }).join('')}
               <td style="text-align:center;padding:4px 6px">
-                <span class="${avg>100?'sum-over':avg>90?'sum-warn':avg>0?'sum-ok':'sum-gray'}">${avg>0?avg+'%':'-'}</span>
+                <span id="hm-avg-${emp.id}" class="${avg>100?'sum-over':avg>90?'sum-warn':avg>0?'sum-ok':'sum-gray'}">${avg>0?avg+'%':'-'}</span>
               </td>
             </tr>`;
           }).join('')}
@@ -1298,7 +1299,7 @@ function renderEmpPivot(){
                   <span class="tag ${joint>5?'t-err':'t-ok'}" style="font-size:9px;padding:1px 5px">공 ${joint}/5</span>
                 </div>
               </td>
-              <td style="position:sticky;left:80px;background:var(--sf);border-right:2px solid var(--b2);z-index:2;text-align:center;padding:4px">
+              <td id="piveff-${emp.id}" style="position:sticky;left:80px;background:var(--sf);border-right:2px solid var(--b2);z-index:2;text-align:center;padding:4px">
                 ${Array.from({length:12},(_,m)=>{const e=effRate(emp.id,m);return`<div style="font-size:10px;font-family:var(--mono);color:${e>100?'var(--red)':e>90?'var(--amb)':'var(--grn)'};line-height:1.6">${e>0?e+'%':'-'}</div>`;}).join('')}
               </td>
               ${allProjs.map((proj,pi)=>{
@@ -2234,10 +2235,12 @@ function popSlide(val, commit = true) {
   document.getElementById('pop-slider').style.background =
     `linear-gradient(to right, ${trackCol} 0%, ${trackCol} ${pct2}%, var(--sf2) ${pct2}%, var(--sf2) 100%)`;
 
-  // commit이면 셀 + 사이드바 + 요약 행 즉시 업데이트
+  // commit이면 셀 + 히트맵 + 3책5공 뱃지 + 사이드바 즉시 업데이트
   if (commit) {
     refreshCell(POP.eid, POP.pid, POP.m);
     refreshSummaryRow(POP.eid, POP.pid);
+    refresh345Badge(POP.eid);
+    refreshHeatmapRow(POP.eid);
     renderSidebar();
   }
 }
@@ -2263,6 +2266,52 @@ function popSetRole(role) {
   });
   refresh345Badge(POP.eid);
   popSlide(getRate(POP.eid, POP.pid, POP.m), true);
+}
+
+function refreshHeatmapRow(eid) {
+  const emp = S.employees.find(e => e.id === eid);
+  if (!emp) return;
+  const eff12 = Array.from({length:12}, (_, m) => effRate(eid, m));
+  const { chief, joint } = get345(eid);
+
+  // 히트맵 3책5공 뱃지
+  const badgeEl = document.getElementById(`hm-badge-${eid}`);
+  if (badgeEl) {
+    badgeEl.innerHTML = `<div style="font-size:9px;line-height:1.6">
+      <span style="color:${chief>3?'var(--red)':'var(--tx3)'}">책 ${chief}/3</span><br>
+      <span style="color:${joint>5?'var(--red)':'var(--tx3)'}">공 ${joint}/5</span>
+    </div>`;
+  }
+
+  // 히트맵 월별 셀
+  eff12.forEach((e, mi) => {
+    const el = document.getElementById(`hm-cell-${eid}-${mi}`);
+    if (!el) return;
+    const bg = e > 100 ? 'var(--red)' : e > 90 ? 'var(--amb)' : e > 0 ? 'var(--grn)' : 'rgba(255,255,255,0.06)';
+    const opacity = e > 0 ? Math.max(0.25, Math.min(1, e / 100)) : 1;
+    el.style.background = bg;
+    el.style.opacity = e > 0 ? opacity : 1;
+    el.style.color = e > 0 ? '#fff' : 'var(--tx3)';
+    el.textContent = e > 0 ? e : '';
+    el.title = `${emp.name} ${MN[mi]}: ${e > 0 ? e+'%' : '미입력'}`;
+  });
+
+  // 히트맵 평균 셀
+  const filled = eff12.filter(e => e > 0).length;
+  const avg = filled > 0 ? Math.round(eff12.filter(e=>e>0).reduce((s,e)=>s+e,0)/filled) : 0;
+  const avgEl = document.getElementById(`hm-avg-${eid}`);
+  if (avgEl) {
+    avgEl.className = avg>100?'sum-over':avg>90?'sum-warn':avg>0?'sum-ok':'sum-gray';
+    avgEl.textContent = avg > 0 ? avg+'%' : '-';
+  }
+
+  // 피벗 테이블 유효% 열
+  const pivEl = document.getElementById(`piveff-${eid}`);
+  if (pivEl) {
+    pivEl.innerHTML = eff12.map(e =>
+      `<div style="font-size:10px;font-family:var(--mono);color:${e>100?'var(--red)':e>90?'var(--amb)':'var(--grn)'};line-height:1.6">${e>0?e+'%':'-'}</div>`
+    ).join('');
+  }
 }
 
 function refresh345Badge(eid) {
@@ -3006,6 +3055,71 @@ async function clearFeedback() {
 // ── DB LAYER ────────────────────────────────────
 
 let _loadingInProgress = false;
+
+// ── 소프트 새로고침 ─────────────────────────────
+// 브라우저 새로고침(F5) 대신 사용 — 세션·채널 유지, 데이터만 재조회
+async function softRefresh() {
+  if (_loadingInProgress) return;
+  const btn = document.getElementById('btn-soft-refresh');
+  if (btn) { btn.disabled = true; btn.textContent = '🔄 로딩...'; }
+
+  _loadingInProgress = true;
+  setDbStatus('connecting');
+  try {
+    const [empRes, projRes, partRes, salRes] = await Promise.all([
+      db.from('employees').select('*'),
+      db.from('projects').select('*'),
+      db.from('participation').select('*'),
+      db.from('salary').select('*'),
+    ]);
+    if (empRes.error) throw empRes.error;
+    if (projRes.error) throw projRes.error;
+
+    if (empRes.data.length > 0)
+      S.employees = empRes.data.map(r => ({
+        id: r.id, name: r.name, code: r.code || '',
+        rank: r.rank || '연구원', baseSalary: r.base_salary || 0, isCosd: r.is_cosd || false,
+      }));
+
+    if (projRes.data.length > 0)
+      S.projects = projRes.data.map(r => ({
+        id: r.id, name: r.name, type: r.type || 'normal',
+        budget: r.budget || 0, include345: r.include_345 !== false,
+        minRate: r.min_rate || 10, category: r.category || '',
+        startDate: r.start_date || null, endDate: r.end_date || null, piId: r.pi_id || null,
+      }));
+
+    if (partRes.data?.length > 0) {
+      for (const r of partRes.data) {
+        const yr = r.year || 2025;
+        if (!S.participation[yr]) S.participation[yr] = {};
+        if (!S.participation[yr][r.emp_id]) S.participation[yr][r.emp_id] = {};
+        if (!S.participation[yr][r.emp_id][r.proj_id])
+          S.participation[yr][r.emp_id][r.proj_id] = Array.from({length:12}, () => ({rate:0, role:'공동'}));
+        S.participation[yr][r.emp_id][r.proj_id][r.month] = {rate: r.rate, role: r.role};
+      }
+    }
+
+    if (salRes.data?.length > 0) {
+      for (const r of salRes.data) {
+        const yr = r.year || 2025;
+        if (!S.salary[yr]) S.salary[yr] = {};
+        if (!S.salary[yr][r.emp_id]) S.salary[yr][r.emp_id] = Array(12).fill(null);
+        S.salary[yr][r.emp_id][r.month] = r.amount;
+      }
+    }
+
+    setDbStatus('ok');
+    render();
+    toast('✓ 새로고침 완료');
+  } catch(e) {
+    setDbStatus('error');
+    toast(`⚠ 새로고침 실패: ${e.message}`, 3000);
+  } finally {
+    _loadingInProgress = false;
+    if (btn) { btn.disabled = false; btn.textContent = '🔄 새로고침'; }
+  }
+}
 
 async function loadFromDB() {
   if (_loadingInProgress) return;   // 중복 호출 차단
