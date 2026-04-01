@@ -231,6 +231,11 @@ input[type=range]#pop-slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
 .hm-cell{width:100%;height:22px;border-radius:3px;cursor:default;transition:opacity .1s}
 .hm-cell:hover{opacity:.7}
 
+/* ── READ-ONLY MODE ── */
+.read-only .ro-hide{display:none!important}
+.read-only .rate-cell{cursor:default!important;pointer-events:none}
+.read-only .rate-cell:hover{background:var(--sf2)!important}
+
 /* ── MISC ── */
 ::-webkit-scrollbar{width:10px;height:10px}
 ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.25);border-radius:99px}
@@ -329,12 +334,12 @@ input[type=range]#pop-slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
     <button class="nav-btn on" onclick="nav('dash')">대시보드</button>
     <button class="nav-btn"    onclick="nav('proj')">과제별 현황</button>
     <button class="nav-btn"    onclick="nav('emp')">직원별 참여율</button>
-    <button class="nav-btn"    onclick="nav('salary')">급여 · 잔액</button>
-    <button class="nav-btn"    onclick="nav('master')">기준 데이터</button>
-    <button class="nav-btn"    onclick="nav('history')">변경 이력</button>
-    <button class="nav-btn"    onclick="nav('pivot')" style="color:var(--pur)">전체 피벗</button>
-    <button class="nav-btn"    onclick="nav('tips')" style="color:var(--amb)">사용 가이드</button>
-    <button class="nav-btn"    onclick="nav('admin')" id="nav-admin" style="color:var(--red);display:none">관리자</button>
+    <button class="nav-btn"    onclick="nav('salary')" id="nav-salary">급여 · 잔액</button>
+    <button class="nav-btn"    onclick="nav('master')" id="nav-master">기준 데이터</button>
+    <button class="nav-btn"    onclick="nav('history')" id="nav-history">변경 이력</button>
+    <button class="nav-btn"    onclick="nav('pivot')"  id="nav-pivot" style="color:var(--pur)">전체 피벗</button>
+    <button class="nav-btn"    onclick="nav('tips')"   id="nav-tips" style="color:var(--amb)">사용 가이드</button>
+    <button class="nav-btn"    onclick="nav('admin')"  id="nav-admin" style="color:var(--red);display:none">관리자</button>
   </nav>
   <div class="top-actions">
     <!-- 연도 전환 -->
@@ -658,6 +663,7 @@ const S = {
   lockedMonths: {},
   history: [],
   isAdmin: false,
+  isReadOnly: false,
   currentUser: null,
   isLoading: false,
   empView: 'pivot',
@@ -1017,9 +1023,9 @@ function renderProj(){
     <div style="font-size:13px;font-weight:600;margin-bottom:4px">참여율 입력 — ${proj.name}</div>
     <div style="font-size:11px;color:var(--tx3);margin-bottom:8px">셀 클릭 → 슬라이더 · 🔒=잠금 · ⟳=전체월 복사</div>
     <div style="margin-bottom:10px;display:flex;gap:6px;flex-wrap:wrap">
-      <button class="btn btn-ghost btn-sm" onclick="openAssignModal('${pid}')">+ 직원 배정</button>
-      <button class="btn btn-ghost btn-sm" onclick="lockAllConfirmed()">🔒 확정월 일괄 잠금</button>
-      <button class="btn btn-ghost btn-sm" onclick="openBulkModal('${pid}')" style="color:var(--pur)">📋 일괄 입력</button>
+      <button class="btn btn-ghost btn-sm ro-hide" onclick="openAssignModal('${pid}')">+ 직원 배정</button>
+      <button class="btn btn-ghost btn-sm ro-hide" onclick="lockAllConfirmed()">🔒 확정월 일괄 잠금</button>
+      <button class="btn btn-ghost btn-sm ro-hide" onclick="openBulkModal('${pid}')" style="color:var(--pur)">📋 일괄 입력</button>
     </div>
     <div class="tbl-wrap"><table>
       <thead><tr><th>직원</th><th>역할</th>${MN.map((mn,i)=>`<th class="r" style="min-width:64px">${mn}${isLocked(participants[0]?.id,i)?'🔒':''}</th>`).join('')}<th class="r">평균</th><th></th></tr></thead>
@@ -1038,11 +1044,11 @@ function renderProj(){
                   ? `<span style="display:inline-flex;align-items:center;justify-content:flex-end;width:58px;height:28px;padding:0 7px;border-radius:5px;background:rgba(255,255,255,0.04);border:1px solid var(--b);color:var(--tx3);font-family:var(--mono);font-size:12px">${mv.rate}%</span>`
                   : rateCell(emp.id,pid,m)
                 }
-                <button onclick="toggleLock('${emp.id}',${m})" style="position:absolute;top:2px;right:2px;background:none;border:none;cursor:pointer;font-size:9px;color:${locked?'var(--amb)':'var(--tx3)'};opacity:${locked?1:0.4}" title="${locked?'잠금 해제':'잠금'}">${locked?'🔒':'🔓'}</button>
+                <button onclick="toggleLock('${emp.id}',${m})" class="ro-hide" style="position:absolute;top:2px;right:2px;background:none;border:none;cursor:pointer;font-size:9px;color:${locked?'var(--amb)':'var(--tx3)'};opacity:${locked?1:0.4}" title="${locked?'잠금 해제':'잠금'}">${locked?'🔒':'🔓'}</button>
               </td>`;
             }).join('')}
             <td class="${sCls(avg)}">${avg}%</td>
-            <td><button class="btn btn-ghost btn-sm" onclick="copyRowToAll('${emp.id}','${pid}')" title="${MN[S.selMonth]} 값을 전체 월에 복사">⟳</button></td>
+            <td><button class="btn btn-ghost btn-sm ro-hide" onclick="copyRowToAll('${emp.id}','${pid}')" title="${MN[S.selMonth]} 값을 전체 월에 복사">⟳</button></td>
           </tr>`;
         }).join('')}
         <tr style="background:var(--sf2)" id="sum-proj-${pid}"><td colspan="2" style="color:var(--tx3);font-size:11px">월 집행예정</td>
@@ -1649,6 +1655,7 @@ function renderMaster(){
 // ── ACTIONS ────────────────────────────────────
 
 function nav(v) {
+  if (S.isReadOnly && !RO_ALLOWED_VIEWS.includes(v)) return;
   S.view = v;
   try { history.replaceState(null, '', `#${v}`); } catch(e) {}
   if (v === 'proj' && !S.selProj) S.selProj = S.projects[0]?.id;
@@ -3280,10 +3287,28 @@ function showUserChip(user) {
   document.getElementById('user-chip').style.display = 'flex';
 }
 
-function updateAdminNavVisibility() {
+const RO_EMAIL = 'edir@kdia.org';
+const RO_ALLOWED_VIEWS = ['dash', 'proj', 'emp'];
+
+function updateNavVisibility() {
   const adminBtn = document.getElementById('nav-admin');
   if (adminBtn) adminBtn.style.display = S.isAdmin ? '' : 'none';
+
+  const roNavIds = ['nav-salary', 'nav-master', 'nav-history', 'nav-pivot', 'nav-tips'];
+  roNavIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = S.isReadOnly ? 'none' : '';
+  });
+
+  document.body.classList.toggle('read-only', S.isReadOnly);
+
+  if (S.isReadOnly && !RO_ALLOWED_VIEWS.includes(S.view)) {
+    nav('dash');
+  }
 }
+
+// 하위 호환
+function updateAdminNavVisibility() { updateNavVisibility(); }
 
 // Auth 상태 감지
 db.auth.onAuthStateChange(async (event, session) => {
@@ -3292,10 +3317,11 @@ db.auth.onAuthStateChange(async (event, session) => {
     document.getElementById('auth-screen').style.display = 'none';
     showUserChip(session.user);
 
-    // 관리자 확인
+    // 관리자 / 읽기전용 확인
     const { data } = await db.from('admins').select('email').eq('email', session.user.email).maybeSingle();
     S.isAdmin = !!data;
-    updateAdminNavVisibility();
+    S.isReadOnly = session.user.email === RO_EMAIL;
+    updateNavVisibility();
 
     if (event === 'SIGNED_IN') {
       addHistory('로그인', session.user.email);
@@ -3309,7 +3335,8 @@ db.auth.onAuthStateChange(async (event, session) => {
     document.getElementById('user-chip').style.display = 'none';
     S.currentUser = null;
     S.isAdmin = false;
-    updateAdminNavVisibility();
+    S.isReadOnly = false;
+    updateNavVisibility();
   }
 });
 
