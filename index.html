@@ -633,12 +633,13 @@ const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 const db = supabase.createClient(SUPA_URL, SUPA_KEY, {
   auth: {
     storageKey: 'cosd-auth',
-    storage: window.sessionStorage,
+    storage: window.localStorage,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
   }
 });
+const TAB_ID = Math.random().toString(36).slice(2, 8);
 
 const MN = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
 
@@ -3160,8 +3161,13 @@ async function deleteProjFromDB(pid) {
   if (error) throw error;
 }
 
+let _realtimeChannel = null;
 function subscribeRealtime() {
-  db.channel('labor-changes')
+  if (_realtimeChannel) {
+    db.removeChannel(_realtimeChannel);
+    _realtimeChannel = null;
+  }
+  _realtimeChannel = db.channel('labor-changes-' + TAB_ID)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'employees' }, () => loadFromDB())
     .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' },  () => loadFromDB())
     .on('postgres_changes', { event: '*', schema: 'public', table: 'participation' }, payload => {
@@ -3178,6 +3184,13 @@ function subscribeRealtime() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'salary' }, () => loadFromDB())
     .subscribe();
 }
+
+// 탭이 다시 활성화될 때 데이터 동기화
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && S.currentUser) {
+    loadFromDB();
+  }
+});
 
 // ── AUTH ────────────────────────────────────────
 let _authMode = 'login';
