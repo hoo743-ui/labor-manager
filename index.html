@@ -1049,57 +1049,7 @@ function renderProj(){
       </tbody>
     </table></div>
   </div>
-
-  <!-- 적정 인건비 산출 테이블 -->
-  <div class="card mb14">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-      <div>
-        <div style="font-size:13px;font-weight:600">적정 인건비 산출 <span style="font-size:10px;font-weight:400;color:var(--tx3)">(실제 급여 × 참여율)</span></div>
-        <div style="font-size:11px;color:var(--tx3);margin-top:2px">급여·잔액 탭에서 확정 급여를 입력할수록 계산이 정확해집니다</div>
-      </div>
-    </div>
-    <div class="tbl-wrap"><table style="font-size:11px">
-      <thead><tr>
-        <th>직원</th><th>역할</th>
-        ${MN.map(mn=>`<th class="r">${mn}</th>`).join('')}
-        <th class="r">연간 합계</th>
-      </tr></thead>
-      <tbody>
-        ${participants.map(emp=>{
-          const proj2=S.projects.find(p=>p.id===pid);
-          const isPI = proj2?.piId === emp.id;
-          const annual = Array.from({length:12},(_,m)=>mExec(emp.id,pid,m)).reduce((s,v)=>s+v,0);
-          return `<tr>
-            <td class="name" style="white-space:nowrap">${emp.name}<span style="font-size:10px;color:var(--tx3);margin-left:4px">${emp.rank}</span></td>
-            <td><span class="tag ${isPI?'t-책임':'t-공동'}" style="font-size:10px">${isPI?'책임자':'공동참여'}</span></td>
-            ${Array.from({length:12},(_,m)=>{
-              const r=getRate(emp.id,pid,m);
-              const sal=getSal(emp.id,m);
-              const amt=mExec(emp.id,pid,m);
-              const cfm=isCfm(emp.id,m);
-              return `<td class="num" title="${MN[m]}: 급여 ${fmt(sal)}원 × ${r}%"
-                style="color:${cfm?'var(--grn)':'var(--tx2)'};${!cfm?'opacity:0.7':''}">
-                ${amt>0?fmtM(amt):'<span style="color:var(--tx3)">-</span>'}
-                ${cfm?'<span style="font-size:8px;color:var(--grn)">✓</span>':''}
-              </td>`;
-            }).join('')}
-            <td class="num" style="font-weight:600;color:var(--acc)">${annual>0?fmt(annual)+'원':'-'}</td>
-          </tr>`;
-        }).join('')}
-        <tr style="background:var(--sf2);font-weight:600">
-          <td colspan="2" style="color:var(--tx3);font-size:11px">월 합계</td>
-          ${Array.from({length:12},(_,m)=>{
-            const tot=participants.reduce((s,e)=>s+mExec(e.id,pid,m),0);
-            return`<td class="num" style="color:var(--tx)">${tot>0?fmtM(tot):'-'}</td>`;
-          }).join('')}
-          <td class="num" style="color:var(--acc)">${fmt(participants.reduce((s,e)=>s+Array.from({length:12},(_,m)=>mExec(e.id,pid,m)).reduce((a,v)=>a+v,0),0))}원</td>
-        </tr>
-      </tbody>
-    </table></div>
-    <div style="font-size:10px;color:var(--tx3);margin-top:8px">
-      <span style="color:var(--grn)">✓ 초록색</span> = 확정 급여 기준 · 회색 = 기본급 기준 추정치 · 셀에 마우스를 올리면 상세 계산 확인
-    </div>
-  </div>`;
+  `;
 }
 
 // ── EMP (피벗 뷰) ──
@@ -1278,70 +1228,7 @@ function renderPivotChart() {
     </div>
   </div>`;
 
-  // ── 미니 바 차트 (기존 유지, 더 compact하게) ──
-  const barHtml = `
-  <div class="card mb14">
-    <div style="font-size:13px;font-weight:600;margin-bottom:12px">직원별 월간 막대 그래프</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
-      ${empData.map(({emp, eff12, chief, joint, hasErr, hasWarn}) => `
-      <div style="background:var(--sf2);border-radius:8px;padding:10px 10px 7px;border:1px solid ${hasErr?'rgba(240,64,96,0.35)':hasWarn?'rgba(240,160,48,0.3)':'var(--b)'}">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
-          <span style="font-size:12px;font-weight:600">${emp.name}</span>
-          <div style="display:flex;gap:3px">
-            <span class="tag ${chief>3?'t-err':'t-ok'}" style="font-size:9px;padding:1px 4px">책${chief}/3</span>
-            <span class="tag ${joint>5?'t-err':'t-ok'}" style="font-size:9px;padding:1px 4px">공${joint}/5</span>
-          </div>
-        </div>
-        <div style="display:flex;gap:2px;align-items:flex-end;height:30px">
-          ${eff12.map((e, m) => {
-            const h = e > 0 ? Math.max(3, Math.min(26, Math.round(e / 100 * 26))) : 2;
-            const col = e > 100 ? 'var(--red)' : e > 90 ? 'var(--amb)' : e > 0 ? 'var(--grn)' : 'rgba(255,255,255,0.07)';
-            return `<div title="${MN[m]}: ${e > 0 ? e + '%' : '미입력'}" class="hm-cell"
-              style="flex:1;height:${h}px;background:${col};border-radius:2px 2px 0 0;width:auto"></div>`;
-          }).join('')}
-        </div>
-        <div style="display:flex;gap:2px;margin-top:3px">
-          ${eff12.map((e, m) => `<div style="flex:1;text-align:center;font-size:8px;color:${e>100?'var(--red)':e>90?'var(--amb)':'var(--tx3)'}">${m+1}</div>`).join('')}
-        </div>
-      </div>`).join('')}
-    </div>
-  </div>`;
-
-  // ── SVG 월별 평균 막대차트 ──
-  const avgData = Array.from({length:12},(_,m)=>{
-    const rs = allEmps.map(e=>effRate(e.id,m)).filter(r=>r>0);
-    return rs.length ? Math.round(rs.reduce((s,r)=>s+r,0)/rs.length) : 0;
-  });
-  const svgBarHtml = `
-  <div class="card mb14">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <div style="font-size:13px;font-weight:600">월별 평균 유효참여율</div>
-      <span style="font-size:11px;color:var(--tx3)">전체 직원 평균 · 단위 %</span>
-    </div>
-    ${svgMonthlyBars(avgData, null, 640, 140, '월별 평균 유효참여율')}
-  </div>`;
-
-  // ── SVG 직원별 라인 차트 ──
-  const EMP_COLORS=['#4f8ef7','#2ecc87','#f0a030','#9b6dfa','#f04060','#00d4ff','#ff9f43','#a29bfe','#55efc4','#fd79a8'];
-  const lineSeries = allEmps.map((emp,i)=>({
-    name: emp.name,
-    color: EMP_COLORS[i % EMP_COLORS.length],
-    data12: Array.from({length:12},(_,m)=>effRate(emp.id,m)),
-  }));
-  const svgLineHtml = allEmps.length < 2 ? '' : `
-  <div class="card mb14">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
-      <div style="font-size:13px;font-weight:600">직원별 참여율 추이</div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap">
-        ${allEmps.map((emp,i)=>`<span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--tx2)">
-          <span style="width:12px;height:3px;border-radius:99px;background:${EMP_COLORS[i%EMP_COLORS.length]};display:inline-block"></span>${emp.name}
-        </span>`).join('')}
-      </div>
-    </div>
-    ${svgMultiLine(lineSeries, 640, 130)}
-  </div>`;
-
-  return kpiHtml + svgBarHtml + svgLineHtml + hmHtml + barHtml;
+  return kpiHtml + hmHtml;
 }
 
 function renderEmpPivot(){
@@ -1556,23 +1443,39 @@ function renderSalary(){
   if (!S.projects.length) return salSection + `<div class="card" style="text-align:center;color:var(--tx3);padding:40px">등록된 과제가 없습니다</div>`;
 
   const projTabs = `
-  <div class="card mb14" style="padding:14px 16px">
-    <div style="font-size:11px;font-weight:600;color:var(--tx3);margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em">과제 선택</div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap">
-      ${S.projects.map(pr=>{
-        const p2=pct(projAnn(pr.id),pr.budget);
-        const sel=pr.id===pid;
-        return `<button onclick="S.selSalProj='${pr.id}';render()"
-          style="display:flex;flex-direction:column;align-items:flex-start;padding:8px 12px;border-radius:8px;border:1px solid ${sel?'var(--acc)':'var(--b)'};
-          background:${sel?'rgba(79,142,247,0.12)':'var(--sf2)'};cursor:pointer;transition:all .15s;min-width:120px;max-width:180px;text-align:left">
-          <span style="font-size:11px;font-weight:${sel?700:500};color:${sel?'var(--acc)':'var(--tx2)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%">${pr.name}</span>
-          <span style="font-size:10px;font-family:var(--mono);color:${p2>100?'var(--red)':p2>80?'var(--amb)':'var(--grn)'};margin-top:3px">${p2}% 소진</span>
-        </button>`;
-      }).join('')}
+  <div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:14px">
+    <!-- 과제 목록 패널 -->
+    <div style="width:220px;flex-shrink:0;background:var(--sf);border:1px solid var(--b);border-radius:12px;overflow:hidden">
+      <div style="padding:10px 14px 8px;border-bottom:1px solid var(--b);font-size:11px;font-weight:600;color:var(--tx3);letter-spacing:.06em;text-transform:uppercase">
+        과제 목록 <span style="color:var(--tx3);font-weight:400">(${S.projects.length})</span>
+      </div>
+      <div style="overflow-y:auto;max-height:320px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.2) transparent">
+        ${S.projects.map((pr,i)=>{
+          const p2=pct(projAnn(pr.id),pr.budget);
+          const sel=pr.id===pid;
+          const barW=Math.min(p2,100);
+          const barCol=p2>100?'var(--red)':p2>80?'var(--amb)':'var(--grn)';
+          return `<div onclick="S.selSalProj='${pr.id}';render()"
+            style="padding:10px 14px;cursor:pointer;border-left:3px solid ${sel?'var(--acc)':'transparent'};
+            background:${sel?'rgba(79,142,247,0.08)':'transparent'};transition:all .12s;
+            ${i>0?'border-top:1px solid var(--b)':''}">
+            <div style="font-size:12px;font-weight:${sel?600:400};color:${sel?'var(--tx)':'var(--tx2)'};
+              overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:5px">${pr.name}</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+              <span style="font-size:10px;color:var(--tx3)">${pr.category||pr.type==='special'?'특정사업':'일반'}</span>
+              <span style="font-size:10px;font-family:var(--mono);color:${barCol}">${p2}%</span>
+            </div>
+            <div style="height:3px;background:rgba(255,255,255,0.06);border-radius:99px;overflow:hidden">
+              <div style="height:100%;width:${barW}%;background:${barCol};border-radius:99px"></div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
     </div>
-  </div>`;
+    <!-- 선택 과제 상세 (오른쪽) -->
+    <div style="flex:1;min-width:0" id="sal-detail-wrap">`;
 
-  if (!proj) return salSection + projTabs;
+  if (!proj) return salSection + projTabs + `<div style="color:var(--tx3);padding:40px;text-align:center">과제를 선택하세요</div></div></div>`;
 
   // ── 선택 과제 상세 ──
   const ann=projAnn(proj.id), p=pct(ann,proj.budget);
@@ -1666,8 +1569,10 @@ function renderSalary(){
   </div>
   ${salSection}
   ${projTabs}
-  ${kpi}
-  ${detail}`;
+    ${kpi}
+    ${detail}
+    </div>
+  </div>`;
 }
 
 // ── MASTER ──
