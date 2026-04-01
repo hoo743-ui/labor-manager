@@ -3236,9 +3236,14 @@ async function authSubmit() {
       if (error) throw error;
       if (data?.session) {
         S.currentUser = data.session.user;
+        S.isReadOnly = data.session.user.email === RO_EMAIL;
         document.getElementById('auth-screen').style.display = 'none';
         showUserChip(data.session.user);
         addHistory('로그인', data.session.user.email);
+        // 관리자 확인
+        const { data: adminData } = await db.from('admins').select('email').eq('email', data.session.user.email).maybeSingle();
+        S.isAdmin = !!adminData;
+        updateNavVisibility();
         await loadFromDB();
         subscribeRealtime();
       }
