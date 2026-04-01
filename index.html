@@ -3005,7 +3005,11 @@ async function clearFeedback() {
 
 // ── DB LAYER ────────────────────────────────────
 
+let _loadingInProgress = false;
+
 async function loadFromDB() {
+  if (_loadingInProgress) return;   // 중복 호출 차단
+  _loadingInProgress = true;
   showLoading('데이터 불러오는 중...');
   setDbStatus('connecting');
   try {
@@ -3037,6 +3041,7 @@ async function loadFromDB() {
         category: r.category || '',
         startDate: r.start_date || null,
         endDate: r.end_date || null,
+        piId: r.pi_id || null,
       }));
     }
 
@@ -3062,16 +3067,16 @@ async function loadFromDB() {
       }
     }
 
-    // 관리자 여부 확인
+    // 관리자 여부 확인 — maybeSingle() 사용 (없어도 예외 없음)
     if (S.currentUser) {
-      const { data: adminData } = await db.from('admins').select('email').eq('email', S.currentUser.email).single();
+      const { data: adminData } = await db.from('admins').select('email').eq('email', S.currentUser.email).maybeSingle();
       S.isAdmin = !!adminData;
+      updateNavVisibility();
     }
 
     setDbStatus('ok');
-    S.selProj = S.projects[0]?.id;
-    S.selEmp  = S.employees[0]?.id;
-    hideLoading();
+    if (!S.selProj) S.selProj = S.projects[0]?.id;
+    if (!S.selEmp)  S.selEmp  = S.employees[0]?.id;
     render();
 
     // 첫 진입 시 온보딩 체크
@@ -3082,13 +3087,14 @@ async function loadFromDB() {
 
   } catch(e) {
     setDbStatus('error');
-    hideLoading();
-    // 사용자 친화적 오류 메시지
     const msg = e.message?.includes('fetch') ? '네트워크 연결을 확인해주세요'
       : e.message?.includes('JWT') ? '세션이 만료됐어요. 다시 로그인해주세요'
       : `연결 오류: ${e.message}`;
     toast(`⚠ ${msg}`, 5000);
     render();
+  } finally {
+    hideLoading();           // 어떤 경우에도 로딩 오버레이 반드시 해제
+    _loadingInProgress = false;
   }
 }
 
