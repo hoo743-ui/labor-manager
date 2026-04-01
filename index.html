@@ -434,6 +434,13 @@ input[type=range]#pop-slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
       <span class="pop-stat-label" id="ps-min-label">최소 참여율</span>
       <span class="pop-stat-val" id="ps-min">-</span>
     </div>
+    <div id="ps-max-wrap" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid var(--b2)">
+      <div class="pop-stat-row">
+        <span class="pop-stat-label" style="color:var(--pur);font-weight:600">최대 지급 가능액</span>
+        <span class="pop-stat-val" id="ps-max" style="color:var(--pur);font-weight:600">-</span>
+      </div>
+      <div id="ps-max-detail" style="font-size:10px;color:var(--tx3);margin-top:4px;line-height:1.8"></div>
+    </div>
   </div>
 </div>
 
@@ -485,6 +492,7 @@ input[type=range]#pop-slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
       </select>
     </div>
     <div class="form-row"><div class="form-label">기본급 (월, 원)</div><input class="form-input mono" id="fi-esal" type="number" step="10000" placeholder="4500000"></div>
+    <div class="form-row"><div class="form-label">입사일 <span style="color:var(--tx3);font-size:10px">(퇴직금 추계 기준)</span></div><input class="form-input mono" id="fi-ehire" type="month" placeholder="2022-03"></div>
     <div class="form-row"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--tx2)">
       <input type="checkbox" id="fi-ecosd"> 특정사업 참여자 (참여율 한도 별도 적용)
     </label></div>
@@ -787,6 +795,63 @@ function get345(e) {
 
 function mExec(e, p, m) { return Math.round(getSal(e, m) * getRate(e, p, m) / 100); }
 
+// ── 최대 지급 가능 인건비 계산 ──────────────────────────
+const INS = {
+  pension:    0.0475,   // 국민연금
+  health:     0.03595,  // 건강보험
+  ltcRate:    0.1295,   // 장기요양 (건강보험 금액의 12.95%)
+  employment: 0.0115,   // 고용보험
+  accident:   0.00956,  // 산재보험
+};
+
+// 사업자 부담 4대보험 합계
+function calcInsurance(salary) {
+  const health = salary * INS.health;
+  return Math.round(
+    salary * INS.pension +
+    health +
+    health * INS.ltcRate +
+    salary * INS.employment +
+    salary * INS.accident
+  );
+}
+
+// 월별 퇴직금 추계액 (입사 1년 이상만, 해당 월 급여 기준)
+function calcRetirement(eid, salary, year, month) {
+  const emp = S.employees.find(e => e.id === eid);
+  if (!emp?.hireDate) return 0;
+  const [hy, hm] = emp.hireDate.split('-').map(Number);
+  const hireMonths = hy * 12 + (hm - 1);
+  const curMonths  = year  * 12 + month;
+  if (curMonths - hireMonths < 12) return 0;  // 1년 미만 제외
+  return Math.round(salary / 12);
+}
+
+// 최대 지급 가능 금액 (급여확정 월만, 과제별 참여율 적용)
+function mMaxExec(eid, pid, m) {
+  if (!isCfm(eid, m)) return null;
+  const salary = getSal(eid, m);
+  const rate   = getRate(eid, pid, m);
+  if (!salary || !rate) return null;
+  const ins = calcInsurance(salary);
+  const ret = calcRetirement(eid, salary, S.year, m);
+  return Math.round((salary + ins + ret) * rate / 100);
+}
+
+// 4대보험 상세 내역 (팝업 표시용)
+function insDetail(salary) {
+  const health = salary * INS.health;
+  const ltc    = health * INS.ltcRate;
+  return {
+    pension:    Math.round(salary * INS.pension),
+    health:     Math.round(health),
+    ltc:        Math.round(ltc),
+    employment: Math.round(salary * INS.employment),
+    accident:   Math.round(salary * INS.accident),
+    total:      Math.round(salary * INS.pension + health + ltc + salary * INS.employment + salary * INS.accident),
+  };
+}
+
 function projAnn(pid) {
   let t = 0;
   for (const e of Object.keys(yPart())) {
@@ -1058,6 +1123,23 @@ function renderProj(){
             <td class="num" style="color:${anyCfm?cfmRem<0?'var(--red)':'var(--grn)':'var(--tx3)'};font-family:var(--mono)">${anyCfm?fmt(cfmRem):'-'}</td>
           </tr>`;
         }).join('')}
+        <!-- 최대 지급 가능액 행 -->
+        ${participants.some(emp=>Array.from({length:12},(_,m)=>mMaxExec(emp.id,pid,m)).some(v=>v!==null)) ? `
+        <tr style="background:rgba(155,109,250,0.04);border-top:2px solid var(--b2)">
+          <td colspan="2" style="color:var(--pur);font-size:11px;padding:6px 8px">
+            최대 지급 가능액
+            <span style="font-size:9px;color:var(--tx3);display:block;margin-top:1px">급여+4대보험+퇴직금 × 참여율</span>
+          </td>
+          ${Array.from({length:12},(_,m)=>{
+            const totMax = participants.reduce((s,emp)=>{ const v=mMaxExec(emp.id,pid,m); return v!==null?s+v:s; },0);
+            const hasCfm = participants.some(emp=>mMaxExec(emp.id,pid,m)!==null);
+            return `<td class="num" style="color:${hasCfm?'var(--pur)':'var(--tx3)'};">${hasCfm?fmtM(totMax):'-'}</td>`;
+          }).join('')}
+          <td class="num" style="color:var(--pur);font-weight:600">
+            ${fmt(participants.reduce((s,emp)=>s+Array.from({length:12},(_,m)=>{ const v=mMaxExec(emp.id,pid,m); return v??0; }).reduce((a,v)=>a+v,0),0))}원
+          </td>
+          <td class="num" style="color:var(--tx3)">확정</td>
+        </tr>` : ''}
       </tbody>
     </table></div>
   </div>
@@ -1764,6 +1846,7 @@ function openEmpOv(eid) {
   document.getElementById('fi-ecode').value   = e?.code || '';
   document.getElementById('fi-erank').value   = e?.rank || '연구원';
   document.getElementById('fi-esal').value    = e?.baseSalary || '';
+  document.getElementById('fi-ehire').value   = e?.hireDate || '';
   document.getElementById('fi-ecosd').checked = e?.isCosd || false;
   openOv('emp-ov');
 }
@@ -1772,7 +1855,7 @@ async function saveEmp() {
   const id   = document.getElementById('fi-eid').value.trim();
   const name = document.getElementById('fi-ename').value.trim();
   if (!id || !name) { toast('⚠ ID와 이름은 필수입니다'); return; }
-  const obj = { id, name, code: document.getElementById('fi-ecode').value.trim(), rank: document.getElementById('fi-erank').value, baseSalary: parseInt(document.getElementById('fi-esal').value)||0, isCosd: document.getElementById('fi-ecosd').checked };
+  const obj = { id, name, code: document.getElementById('fi-ecode').value.trim(), rank: document.getElementById('fi-erank').value, baseSalary: parseInt(document.getElementById('fi-esal').value)||0, isCosd: document.getElementById('fi-ecosd').checked, hireDate: document.getElementById('fi-ehire').value || null };
   if (_eeid) { const i = S.employees.findIndex(e => e.id === _eeid); if (i >= 0) S.employees[i] = obj; }
   else { if (S.employees.find(e => e.id === id)) { toast('⚠ 이미 존재하는 ID예요'); return; } S.employees.push(obj); if (!ySal()[id]) ySal()[id] = Array(12).fill(null); }
   closeOv('emp-ov'); render(); toast(`✓ ${name} ${_eeid?'수정':'추가'}됨`);
@@ -2269,6 +2352,27 @@ function popSlide(val, commit = true) {
     : '#4f8ef7';
   document.getElementById('pop-slider').style.background =
     `linear-gradient(to right, ${trackCol} 0%, ${trackCol} ${pct2}%, var(--sf2) ${pct2}%, var(--sf2) 100%)`;
+
+  // 최대 지급 가능액 (급여 확정 월만 표시)
+  const maxWrap = document.getElementById('ps-max-wrap');
+  if (isCfm(POP.eid, POP.m) && val > 0) {
+    const cfmSal = getSal(POP.eid, POP.m);
+    const ins    = insDetail(cfmSal);
+    const ret    = calcRetirement(POP.eid, cfmSal, S.year, POP.m);
+    const base   = cfmSal + ins.total + ret;
+    const maxAmt = Math.round(base * val / 100);
+    document.getElementById('ps-max').textContent = fmt(maxAmt) + '원';
+    const emp = S.employees.find(e => e.id === POP.eid);
+    const hasHire = !!emp?.hireDate;
+    document.getElementById('ps-max-detail').innerHTML =
+      `급여 ${fmtM(cfmSal)} + 4대보험 ${fmtM(ins.total)}` +
+      `<span style="font-size:9px;color:var(--tx3)"> (연금${fmtM(ins.pension)}·건강${fmtM(ins.health)}·장기요양${fmtM(ins.ltc)}·고용${fmtM(ins.employment)}·산재${fmtM(ins.accident)})</span>` +
+      (ret > 0 ? ` + 퇴직금 ${fmtM(ret)}` : hasHire ? ' <span style="color:var(--tx3)">(입사 1년 미만 — 퇴직금 미포함)</span>' : ' <span style="color:var(--amb)">⚠ 입사일 미입력</span>') +
+      ` × ${val}%`;
+    maxWrap.style.display = '';
+  } else {
+    maxWrap.style.display = 'none';
+  }
 
   // commit이면 셀 + 히트맵 + 3책5공 뱃지 + 사이드바 즉시 업데이트
   if (commit) {
@@ -3164,6 +3268,7 @@ async function softRefresh() {
       S.employees = empRes.data.map(r => ({
         id: r.id, name: r.name, code: r.code || '',
         rank: r.rank || '연구원', baseSalary: r.base_salary || 0, isCosd: r.is_cosd || false,
+        hireDate: r.hire_date || null,
       }));
 
     if (projRes.data.length > 0)
@@ -3230,6 +3335,7 @@ async function loadFromDB() {
         rank: r.rank || '연구원',
         baseSalary: r.base_salary || 0,
         isCosd: r.is_cosd || false,
+        hireDate: r.hire_date || null,
       }));
     }
 
@@ -3309,6 +3415,11 @@ async function saveToDB() {
         rank: e.rank, base_salary: e.baseSalary, is_cosd: e.isCosd,
       })), { onConflict: 'id' }
     );
+    // hire_date 별도 저장 (컬럼 없으면 무시)
+    try {
+      const hireRows = S.employees.filter(e => e.hireDate).map(e => ({ id: e.id, hire_date: e.hireDate }));
+      if (hireRows.length) await db.from('employees').upsert(hireRows, { onConflict: 'id' });
+    } catch(_) {}
 
     await db.from('projects').upsert(
       S.projects.map(p => ({
