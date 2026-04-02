@@ -1160,23 +1160,6 @@ function renderProj(){
             <td class="num" style="color:${anyCfm?cfmRem<0?'var(--red)':'var(--grn)':'var(--tx3)'};font-family:var(--mono)">${anyCfm?fmt(cfmRem):'-'}</td>
           </tr>`;
         }).join('')}
-        <!-- 최대 지급 가능액 행 -->
-        ${participants.some(emp=>Array.from({length:12},(_,m)=>mMaxExec(emp.id,pid,m)).some(v=>v!==null)) ? `
-        <tr style="background:rgba(155,109,250,0.04);border-top:2px solid var(--b2)">
-          <td colspan="2" style="color:var(--pur);font-size:11px;padding:6px 8px">
-            최대 지급 가능액
-            <span style="font-size:9px;color:var(--tx3);display:block;margin-top:1px">급여+4대보험+퇴직금 × 참여율</span>
-          </td>
-          ${Array.from({length:12},(_,m)=>{
-            const totMax = participants.reduce((s,emp)=>{ const v=mMaxExec(emp.id,pid,m); return v!==null?s+v:s; },0);
-            const hasCfm = participants.some(emp=>mMaxExec(emp.id,pid,m)!==null);
-            return `<td class="num" style="color:${hasCfm?'var(--pur)':'var(--tx3)'};">${hasCfm?fmtM(totMax):'-'}</td>`;
-          }).join('')}
-          <td class="num" style="color:var(--pur);font-weight:600">
-            ${fmt(participants.reduce((s,emp)=>s+Array.from({length:12},(_,m)=>{ const v=mMaxExec(emp.id,pid,m); return v??0; }).reduce((a,v)=>a+v,0),0))}원
-          </td>
-          <td class="num" style="color:var(--tx3)">확정</td>
-        </tr>` : ''}
       </tbody>
     </table></div>
   </div>
@@ -1215,6 +1198,42 @@ function renderProj(){
         }).join('')}
         <tr style="background:var(--sf2)" id="sum-proj-${pid}"><td colspan="2" style="color:var(--tx3);font-size:11px">월 집행예정</td>
           ${Array.from({length:12},(_,m)=>{const tot=participants.reduce((s,e)=>s+mExec(e.id,pid,m),0);return`<td class="num" style="color:var(--tx2)">${tot>0?fmt(tot):'-'}</td>`;}).join('')}<td></td><td></td></tr>
+        ${participants.some(emp=>Array.from({length:12},(_,m)=>mMaxExec(emp.id,pid,m)).some(v=>v!==null)) ? `
+        <tr style="background:rgba(155,109,250,0.06);border-top:2px solid rgba(155,109,250,0.25)">
+          <td colspan="14" style="padding:5px 10px;font-size:10px;font-weight:700;color:var(--pur);letter-spacing:.04em">
+            최대 지급 가능액
+            <span style="font-weight:400;color:var(--tx3);margin-left:6px">(급여 + 4대보험 사업자부담금 + 퇴직금추계액) × 참여율 &nbsp;|&nbsp; 급여 확정 월만 표시</span>
+          </td>
+        </tr>
+        ${participants.map(emp=>{
+          const annMax=Array.from({length:12},(_,m)=>{const v=mMaxExec(emp.id,pid,m);return v??0;}).reduce((a,v)=>a+v,0);
+          if(!annMax)return'';
+          const sal12=Array.from({length:12},(_,m)=>isCfm(emp.id,m)?getSal(emp.id,m):null);
+          const ins12=Array.from({length:12},(_,m)=>sal12[m]!=null?calcInsurance(sal12[m]):null);
+          const ret12=Array.from({length:12},(_,m)=>sal12[m]!=null?calcRetirement(emp.id,sal12[m],S.year,m):null);
+          return `<tr style="background:rgba(155,109,250,0.02)" title="(급여 + 4대보험 + 퇴직금) × 참여율">
+            <td class="name" style="color:var(--pur);font-size:11px">${emp.name}</td>
+            <td style="font-size:10px;color:var(--tx3)">최대지급</td>
+            ${Array.from({length:12},(_,m)=>{
+              const v=mMaxExec(emp.id,pid,m);
+              const s=sal12[m],ins=ins12[m],ret=ret12[m],rate=getRate(emp.id,pid,m);
+              const tip=v!==null?`title="${fmt(s)} + ${fmt(ins)}(4보험) + ${fmt(ret??0)}(퇴직금) × ${rate}%"`:'';
+              return `<td class="num" style="color:${v!==null?'var(--pur)':'var(--tx3)'};" ${tip}>${v!==null?fmtM(v):'-'}</td>`;
+            }).join('')}
+            <td class="num" style="color:var(--pur);font-weight:600">${fmtM(annMax)}</td>
+            <td></td>
+          </tr>`;
+        }).join('')}
+        <tr style="background:rgba(155,109,250,0.07);border-top:1px solid rgba(155,109,250,0.2)">
+          <td colspan="2" style="color:var(--pur);font-size:11px;font-weight:700;padding:6px 10px">합계</td>
+          ${Array.from({length:12},(_,m)=>{
+            const tot=participants.reduce((s,emp)=>{const v=mMaxExec(emp.id,pid,m);return v!==null?s+v:s;},0);
+            const hasCfm=participants.some(emp=>mMaxExec(emp.id,pid,m)!==null);
+            return `<td class="num" style="color:${hasCfm?'var(--pur)':'var(--tx3)'};font-weight:600">${hasCfm?fmtM(tot):'-'}</td>`;
+          }).join('')}
+          <td class="num" style="color:var(--pur);font-weight:700">${fmtM(participants.reduce((s,emp)=>s+Array.from({length:12},(_,m)=>{const v=mMaxExec(emp.id,pid,m);return v??0;}).reduce((a,v)=>a+v,0),0))}</td>
+          <td></td>
+        </tr>` : ''}
       </tbody>
     </table></div>
   </div>
