@@ -3811,6 +3811,7 @@ async function softRefresh() {
     }
 
     setDbStatus('ok');
+    saveToCache();
     render();
     toast('✓ 새로고침 완료');
   } catch(e) {
@@ -3822,13 +3823,55 @@ async function softRefresh() {
   }
 }
 
+// ── 로컬 캐시 저장/로드 ──────────────────────────
+function _cacheKey() {
+  return 'rms-cache-' + (S.currentUser?.email || 'guest');
+}
+function saveToCache() {
+  try {
+    localStorage.setItem(_cacheKey(), JSON.stringify({
+      employees: S.employees,
+      projects: S.projects,
+      participation: S.participation,
+      salary: S.salary,
+      ts: Date.now()
+    }));
+  } catch(e) { /* localStorage 용량 초과 등 무시 */ }
+}
+function loadFromCache() {
+  try {
+    const raw = localStorage.getItem(_cacheKey());
+    if (!raw) return false;
+    const d = JSON.parse(raw);
+    if (!d || (!d.employees?.length && !d.projects?.length)) return false;
+    S.employees     = d.employees    || [];
+    S.projects      = d.projects     || [];
+    S.participation = d.participation|| {};
+    S.salary        = d.salary       || {};
+    if (!S.selProj) S.selProj = S.projects[0]?.id;
+    if (!S.selEmp)  S.selEmp  = S.employees[0]?.id;
+    return true;
+  } catch(e) { return false; }
+}
+
 async function loadFromDB() {
-  if (_loadingInProgress) return;   // 중복 호출 차단
+  if (_loadingInProgress) return;
   _loadingInProgress = true;
-  // 15초 안에 완료 안 되면 강제 해제 (먹통 방지)
+
+  // ① 캐시 먼저 — 있으면 즉시 화면 표시
+  const hadCache = loadFromCache();
+  if (hadCache) {
+    hideLoading();
+    setDbStatus('connecting');
+    render();
+    toast('📦 캐시 데이터 표시 중 · DB 동기화 중...', 1500);
+  } else {
+    showLoading('데이터 불러오는 중...');
+    setDbStatus('connecting');
+  }
+
+  // ② DB에서 최신 데이터 백그라운드 동기화
   const _loadTimeout = setTimeout(() => { hideLoading(); _loadingInProgress = false; }, 15000);
-  showLoading('데이터 불러오는 중...');
-  setDbStatus('connecting');
   try {
     const [empRes, projRes, partRes, salRes] = await Promise.all([
       db.from('employees').select('*'),
@@ -3864,6 +3907,7 @@ async function loadFromDB() {
     }
 
     // 참여율 — 연도별
+    S.participation = {};
     if (partRes.data && partRes.data.length > 0) {
       for (const r of partRes.data) {
         const yr = r.year || 2025;
@@ -3876,6 +3920,7 @@ async function loadFromDB() {
     }
 
     // 급여 — 연도별
+    S.salary = {};
     if (salRes.data && salRes.data.length > 0) {
       for (const r of salRes.data) {
         const yr = r.year || 2025;
@@ -3885,7 +3930,7 @@ async function loadFromDB() {
       }
     }
 
-    // 관리자 여부 확인 — maybeSingle() 사용 (없어도 예외 없음)
+    // 관리자 여부
     if (S.currentUser) {
       const { data: adminData } = await db.from('admins').select('email').eq('email', S.currentUser.email).maybeSingle();
       S.isAdmin = !!adminData;
@@ -3895,12 +3940,16 @@ async function loadFromDB() {
     setDbStatus('ok');
     if (!S.selProj) S.selProj = S.projects[0]?.id;
     if (!S.selEmp)  S.selEmp  = S.employees[0]?.id;
+
+    // ③ 캐시 저장 후 화면 갱신
+    saveToCache();
     render();
 
-    // 첫 진입 시 온보딩 체크
-    const ob = getOnboardStatus();
-    if (!ob.hasEmp && !ob.hasProj) {
-      toast('💡 기준 데이터 탭에서 직원과 과제를 먼저 등록해주세요', 4000);
+    if (!hadCache) {
+      const ob = getOnboardStatus();
+      if (!ob.hasEmp && !ob.hasProj) {
+        toast('💡 기준 데이터 탭에서 직원과 과제를 먼저 등록해주세요', 4000);
+      }
     }
 
   } catch(e) {
@@ -3909,7 +3958,7 @@ async function loadFromDB() {
       : e.message?.includes('JWT') ? '세션이 만료됐어요. 다시 로그인해주세요'
       : `연결 오류: ${e.message}`;
     toast(`⚠ ${msg}`, 5000);
-    render();
+    if (!hadCache) render();
   } finally {
     clearTimeout(_loadTimeout);
     hideLoading();
@@ -3967,6 +4016,7 @@ async function saveToDB() {
       await db.from('salary').upsert(salRows, { onConflict: 'emp_id,month,year' });
 
     setDbStatus('saved');
+    saveToCache();
     toast('✓ 저장 완료');
     setTimeout(() => setDbStatus('ok'), 3000);
   } catch(e) {
