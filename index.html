@@ -40,7 +40,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--tx);height:100vh;d
 
 /* ── LAYOUT ── */
 .body{display:flex;flex:1;overflow:hidden}
-.sidebar{width:215px;flex-shrink:0;background:var(--sf);border-right:1px solid var(--b);overflow-y:auto;scrollbar-width:auto;scrollbar-color:rgba(255,255,255,0.3) rgba(255,255,255,0.05)}
+.sidebar{width:220px;flex-shrink:0;background:var(--sf);border-right:1px solid var(--b);overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.18) transparent}
 .sidebar::-webkit-scrollbar{width:8px}
 .sidebar::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.3);border-radius:99px}
 .sidebar::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.5)}
@@ -49,11 +49,11 @@ body{font-family:var(--sans);background:var(--bg);color:var(--tx);height:100vh;d
 
 /* ── SIDEBAR ── */
 .sb-section{padding:12px 0 4px}
-.sb-label{font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--tx3);padding:0 14px 5px;text-transform:uppercase}
-.sb-item{display:flex;align-items:center;gap:6px;padding:6px 14px;cursor:pointer;font-size:12px;color:var(--tx2);transition:all .1s;position:relative;user-select:none}
-.sb-item:hover{color:var(--tx);background:var(--sf2)}
-.sb-item.on{color:var(--tx);background:rgba(79,142,247,0.08)}
-.sb-item.on::before{content:'';position:absolute;left:0;top:4px;bottom:4px;width:3px;background:var(--acc);border-radius:0 3px 3px 0}
+.sb-label{font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--tx3);padding:0 14px 6px;text-transform:uppercase;display:flex;align-items:center;gap:6px}
+.sb-item{display:flex;align-items:center;gap:6px;padding:7px 14px;cursor:pointer;font-size:12px;color:var(--tx2);transition:all .12s;position:relative;user-select:none;border-radius:0}
+.sb-item:hover{color:var(--tx);background:rgba(255,255,255,0.04)}
+.sb-item.on{color:var(--acc);background:rgba(79,142,247,0.1);font-weight:500}
+.sb-item.on::before{content:'';position:absolute;left:0;top:3px;bottom:3px;width:3px;background:var(--acc);border-radius:0 3px 3px 0}
 .sb-pill{margin-left:auto;font-size:10px;font-family:var(--mono);padding:1px 5px;border-radius:3px;flex-shrink:0}
 .pill-ok{background:var(--grn2);color:var(--grn)}
 .pill-warn{background:var(--amb2);color:var(--amb)}
@@ -377,7 +377,16 @@ input[type=range]#pop-slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
     </div>
     <div class="sb-section"><div class="sb-label" id="sb-emp-label">직원</div><div id="sb-emps"></div></div>
     <div class="sb-div"></div>
-    <div class="sb-section"><div class="sb-label">과제</div><div id="sb-projs"></div></div>
+    <div class="sb-section">
+      <div class="sb-label" id="sb-proj-label">과제</div>
+      <div style="padding:0 10px 6px">
+        <input id="sb-proj-search" type="text" autocomplete="off" placeholder="과제 검색..."
+          oninput="sbProjSearch(this.value)"
+          style="width:100%;background:var(--sf2);border:1px solid var(--b);color:var(--tx);border-radius:6px;padding:5px 9px;font-size:11px;font-family:var(--sans);outline:none;transition:border-color .15s"
+          onfocus="this.style.borderColor='var(--acc)'" onblur="this.style.borderColor='var(--b)'">
+      </div>
+      <div id="sb-projs"></div>
+    </div>
   </div>
   <div class="main" id="main"></div>
 </div>
@@ -682,6 +691,7 @@ const S = {
   salBreakdown: false,
   salEmpOpen: false,
   empSearch: '',
+  sbProjSearch: '',
   year: new Date().getFullYear(),
   lockedMonths: {},
   history: [],
@@ -972,20 +982,30 @@ function renderSidebar(){
     const mx=Math.max(...Array.from({length:12},(_,m)=>effRate(emp.id,m)));
     const{chief,joint}=get345(emp.id);
     const over=mx>100||chief>3||joint>5,warn=mx>90&&!over;
-    const clickFn=q?`selEmpFocus`:`selEmp`;
-    return `<div class="sb-item${S.view==='emp'&&S.selEmp===emp.id?' on':''}" onclick="${clickFn}('${emp.id}')">
+    return `<div class="sb-item${S.view==='emp'&&S.selEmp===emp.id?' on':''}" onclick="selEmpFocus('${emp.id}')">
       <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${emp.name}</span>
       ${emp.isCosd?'<span class="tag t-cosd" style="font-size:9px;padding:1px 4px">C</span>':''}
       <span class="sb-pill ${over?'pill-err':warn?'pill-warn':'pill-ok'}">${over?'초과':warn?mx+'%':'정상'}</span>
     </div>`;
   }).join('');
-  pEl.innerHTML=S.projects.map(proj=>{
-    const p=pct(projAnn(proj.id),proj.budget);
-    return `<div class="sb-item${S.view==='proj'&&S.selProj===proj.id?' on':''}" onclick="selProj('${proj.id}')" title="${proj.name}">
-      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px">${proj.name}</span>
-      <span class="sb-pill ${p>100?'pill-err':p>90?'pill-warn':'pill-ok'}">${p}%</span>
-    </div>`;
-  }).join('');
+  const pq=S.sbProjSearch.toLowerCase();
+  const lbl2=document.getElementById('sb-proj-label');
+  if(lbl2){const fProjs=pq?S.projects.filter(p=>p.name.toLowerCase().includes(pq)):S.projects;lbl2.textContent=pq?`과제 (${fProjs.length}/${S.projects.length})`:'과제';}
+  const filteredProjs=pq?S.projects.filter(p=>p.name.toLowerCase().includes(pq)):S.projects;
+  pEl.innerHTML=filteredProjs.length===0
+    ?`<div style="padding:6px 14px;font-size:11px;color:var(--tx3)">"${S.sbProjSearch}" 없음</div>`
+    :filteredProjs.map(proj=>{
+      const p=pct(projAnn(proj.id),proj.budget);
+      return `<div class="sb-item${S.view==='proj'&&S.selProj===proj.id?' on':''}" onclick="selProj('${proj.id}')" title="${proj.name}">
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px">${proj.name}</span>
+        <span class="sb-pill ${p>100?'pill-err':p>90?'pill-warn':'pill-ok'}">${p}%</span>
+      </div>`;
+    }).join('');
+  // input value 복원 (render 후에도 검색어 유지)
+  const sbEmpInput=document.getElementById('sb-search');
+  if(sbEmpInput&&document.activeElement!==sbEmpInput) sbEmpInput.value=S.empSearch;
+  const sbProjInput=document.getElementById('sb-proj-search');
+  if(sbProjInput&&document.activeElement!==sbProjInput) sbProjInput.value=S.sbProjSearch;
 }
 
 // ── DASH ──
@@ -2022,6 +2042,12 @@ function sbSearch(q) {
   renderSidebar();
 }
 
+// 사이드바 과제 검색
+function sbProjSearch(q) {
+  S.sbProjSearch = q.trim();
+  renderSidebar();
+}
+
 function render() {
   const el = document.getElementById('main');
   if (!el) return;
@@ -2249,8 +2275,20 @@ async function applyImport() {
 
 function exportXL() {
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['직원ID','이름','사원코드','직급','기본급(월)','COSD여부'],...S.employees.map(e=>[e.id,e.name,e.code,e.rank,e.baseSalary,e.isCosd?'Y':'N'])]), '직원마스터');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['과제ID','과제명','유형','인건비예산(원)','3책5공포함','최소참여율%'],...S.projects.map(p=>[p.id,p.name,p.type,p.budget,p.include345?'Y':'N',p.minRate])]), '과제마스터');
+
+  // ① 직원마스터
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([
+    ['직원ID','이름','사원코드','직급','기본급(월)','COSD여부'],
+    ...S.employees.map(e=>[e.id,e.name,e.code,e.rank,e.baseSalary,e.isCosd?'Y':'N'])
+  ]), '직원마스터');
+
+  // ② 과제마스터
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([
+    ['과제ID','과제명','유형','인건비예산(원)','3책5공포함','최소참여율%'],
+    ...S.projects.map(p=>[p.id,p.name,p.type,p.budget,p.include345?'Y':'N',p.minRate])
+  ]), '과제마스터');
+
+  // ③ 참여율
   const partRows=[['직원ID','직원이름','과제ID','과제명','역할',...MN.map(m=>m+'%')]];
   for (const eid of Object.keys(yPart())) {
     const empName = S.employees.find(e=>e.id===eid)?.name || eid;
@@ -2262,9 +2300,61 @@ function exportXL() {
     }
   }
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(partRows), '참여율');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['직원ID','이름',...MN],...S.employees.map(e=>[e.id,e.name,...(ySal()[e.id]||Array(12).fill(null)).map(v=>v??'')])]), '급여실적');
+
+  // ④ 급여실적
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([
+    ['직원ID','이름',...MN],
+    ...S.employees.map(e=>[e.id,e.name,...(ySal()[e.id]||Array(12).fill(null)).map(v=>v??'')])
+  ]), '급여실적');
+
+  // ⑤ 인건비상세 (기본급 + 4대보험 + 퇴직금 + 합계)
+  const salRows = [['직원ID','이름','구분',...MN,'연간합계']];
+  for (const emp of S.employees) {
+    const rows4 = [
+      [emp.id, emp.name, '기본급(급여)'],
+      [emp.id, emp.name, '4대보험(사업자부담)'],
+      [emp.id, emp.name, '퇴직금추계'],
+      [emp.id, emp.name, '합계(급여+4대보험+퇴직금)'],
+    ];
+    const sums = [0,0,0,0];
+    for (let m=0; m<12; m++) {
+      const sal = getSal(emp.id, m);
+      const ins = calcInsurance(sal);
+      const ret = calcRetirement(emp.id, sal, S.year, m);
+      const tot = sal + ins + ret;
+      const vals = [sal, ins, ret, tot];
+      vals.forEach((v,i)=>{ rows4[i].push(v); sums[i]+=v; });
+    }
+    rows4.forEach((r,i)=>{ r.push(sums[i]); salRows.push(r); });
+    salRows.push([]); // 직원 간 빈 행
+  }
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(salRows), '인건비상세');
+
+  // ⑥ 월별집행예정 (직원 × 과제 × 월 금액)
+  const execRows = [['직원ID','직원이름','과제ID','과제명',...MN.map(m=>m+'집행'),'연간합계']];
+  for (const eid of Object.keys(yPart())) {
+    const empName = S.employees.find(e=>e.id===eid)?.name || eid;
+    for (const pid of Object.keys(yPart()[eid])) {
+      const projName = S.projects.find(p=>p.id===pid)?.name || pid;
+      const months12 = Array.from({length:12}, (_,m)=>mExec(eid,pid,m));
+      execRows.push([eid, empName, pid, projName, ...months12, months12.reduce((a,b)=>a+b,0)]);
+    }
+  }
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(execRows), '월별집행예정');
+
+  // ⑦ 과제별집행현황 (과제 × 월 합계 + 잔여예산)
+  const projExecRows = [['과제ID','과제명','예산(원)',...MN.map(m=>m+'집행'),'연간집행','잔여예산','소진율(%)']];
+  for (const proj of S.projects) {
+    const months12 = Array.from({length:12}, (_,m)=>
+      S.employees.reduce((s,e)=>s+mExec(e.id,proj.id,m),0)
+    );
+    const ann = months12.reduce((a,b)=>a+b,0);
+    projExecRows.push([proj.id, proj.name, proj.budget, ...months12, ann, proj.budget-ann, proj.budget?Math.round(ann/proj.budget*100):0]);
+  }
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(projExecRows), '과제별집행현황');
+
   XLSX.writeFile(wb, `연구과제_인건비_${S.year}.xlsx`);
-  toast('✓ 엑셀 내보내기 완료');
+  toast('✓ 엑셀 내보내기 완료 (7개 시트)');
 }
 
 // ── 세로형 참여율 가져오기 ────────────────────────────
@@ -2979,35 +3069,84 @@ function printPDF() {
   const printWin = window.open('', '_blank');
   const totalB = S.projects.reduce((s,p)=>s+p.budget,0);
   const totalE = S.projects.reduce((s,p)=>s+projAnn(p.id),0);
+  const totalIns = S.employees.reduce((s,e)=>{ let t=0; for(let m=0;m<12;m++)t+=calcInsurance(getSal(e.id,m)); return s+t; },0);
+  const totalRet = S.employees.reduce((s,e)=>{ let t=0; for(let m=0;m<12;m++)t+=calcRetirement(e.id,getSal(e.id,m),S.year,m); return s+t; },0);
+
+  // ── 과제별 월별 집행 현황 HTML
+  const projMonthHtml = S.projects.map(proj=>{
+    const monthCols = Array.from({length:12},(_,m)=>{
+      const v = S.employees.reduce((s,e)=>s+mExec(e.id,proj.id,m),0);
+      return `<td class="num">${v>0?fmt(v):'-'}</td>`;
+    }).join('');
+    const ann = projAnn(proj.id);
+    const p = pct(ann,proj.budget);
+    return `<tr>
+      <td>${proj.name}</td>
+      ${monthCols}
+      <td class="num ${p>100?'over':'ok'}">${fmt(ann)}</td>
+      <td class="num">${fmt(proj.budget-ann)}</td>
+      <td class="num ${p>100?'over':p>90?'warn':'ok'}">${p}%</td>
+    </tr>`;
+  }).join('');
+
+  // ── 직원별 인건비 상세 HTML
+  const empSalHtml = S.employees.map(emp=>{
+    let basSum=0,insSum=0,retSum=0,totSum=0;
+    const cells = Array.from({length:12},(_,m)=>{
+      const sal=getSal(emp.id,m), ins=calcInsurance(sal), ret=calcRetirement(emp.id,sal,S.year,m), tot=sal+ins+ret;
+      basSum+=sal; insSum+=ins; retSum+=ret; totSum+=tot;
+      return `<td class="num">${fmt(sal)}</td><td class="num sub-num">${fmt(ins)}</td><td class="num sub-num">${fmt(ret)}</td>`;
+    }).join('');
+    return `<tr>
+      <td rowspan="1">${emp.name}</td><td>${emp.rank}</td>
+      ${cells}
+      <td class="num bold">${fmt(basSum)}</td>
+      <td class="num sub-num">${fmt(insSum)}</td>
+      <td class="num sub-num">${fmt(retSum)}</td>
+      <td class="num bold">${fmt(totSum)}</td>
+    </tr>`;
+  }).join('');
+
+  // ── 월 헤더 (1월~12월 × 3열)
+  const mnHeader3 = MN.map(m=>`<th class="num" colspan="3">${m}</th>`).join('');
+  const mnSubHeader = MN.map(()=>`<th class="num sub-num">급여</th><th class="num sub-num">4보험</th><th class="num sub-num">퇴직금</th>`).join('');
+
   printWin.document.write(`<!DOCTYPE html><html lang="ko"><head>
   <meta charset="UTF-8">
   <title>연구과제 인건비 현황 — ${S.year}년</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:'Noto Sans KR',sans-serif;font-size:12px;color:#111;padding:24px}
-    h1{font-size:16px;font-weight:700;margin-bottom:4px}
-    .sub{font-size:11px;color:#666;margin-bottom:20px}
-    table{width:100%;border-collapse:collapse;margin-bottom:20px}
-    th{background:#f0f0f0;padding:6px 8px;text-align:left;font-weight:600;border:1px solid #ccc;font-size:11px}
-    td{padding:5px 8px;border:1px solid #ddd;font-size:11px}
+    body{font-family:'Noto Sans KR',sans-serif;font-size:11px;color:#111;padding:20px}
+    h1{font-size:15px;font-weight:700;margin-bottom:3px}
+    .sub{font-size:10px;color:#666;margin-bottom:16px}
+    table{width:100%;border-collapse:collapse;margin-bottom:18px;font-size:10px}
+    th{background:#e8e8e8;padding:5px 6px;text-align:left;font-weight:600;border:1px solid #bbb;white-space:nowrap}
+    td{padding:4px 6px;border:1px solid #ddd;white-space:nowrap}
     .num{text-align:right;font-family:monospace}
-    .over{color:#c00;font-weight:600}
-    .ok{color:#090}
-    .section{font-size:13px;font-weight:700;margin:16px 0 8px;padding-bottom:4px;border-bottom:2px solid #222}
-    @media print{body{padding:0}}
+    .sub-num{text-align:right;font-family:monospace;color:#555;background:#fafafa}
+    .bold{font-weight:700}
+    .over{color:#c00;font-weight:700}
+    .warn{color:#b06000}
+    .ok{color:#080}
+    .section{font-size:12px;font-weight:700;margin:14px 0 6px;padding-bottom:3px;border-bottom:2px solid #333}
+    .pagebreak{page-break-before:always}
+    @media print{body{padding:8px}th{background:#ddd!important;-webkit-print-color-adjust:exact}}
   </style></head><body>
-  <h1>연구과제 인건비 참여율 현황</h1>
+  <h1>연구과제 인건비 현황</h1>
   <div class="sub">${S.year}년 기준 · 출력일시: ${new Date().toLocaleString('ko-KR')}</div>
 
-  <div class="section">전체 요약</div>
-  <table><thead><tr><th>구분</th><th class="num">금액</th><th class="num">비율</th></tr></thead>
+  <div class="section">① 전체 요약</div>
+  <table style="max-width:500px"><thead><tr><th>구분</th><th class="num">금액</th><th class="num">비고</th></tr></thead>
   <tbody>
-    <tr><td>총 인건비 예산</td><td class="num">${fmt(totalB)}원</td><td class="num">-</td></tr>
-    <tr><td>연간 집행 예정</td><td class="num ${pct(totalE,totalB)>100?'over':'ok'}">${fmt(totalE)}원</td><td class="num ${pct(totalE,totalB)>100?'over':'ok'}">${pct(totalE,totalB)}%</td></tr>
-    <tr><td>잔여 예산</td><td class="num">${fmt(totalB-totalE)}원</td><td class="num">-</td></tr>
+    <tr><td>총 인건비 예산 (과제 합산)</td><td class="num bold">${fmt(totalB)}원</td><td>-</td></tr>
+    <tr><td>연간 집행 예정 (기본급 기준)</td><td class="num ${pct(totalE,totalB)>100?'over':'ok'}">${fmt(totalE)}원</td><td class="num ${pct(totalE,totalB)>100?'over':'ok'}">${pct(totalE,totalB)}%</td></tr>
+    <tr><td>잔여 예산</td><td class="num">${fmt(totalB-totalE)}원</td><td>-</td></tr>
+    <tr><td>전체 직원 4대보험 연간 추계 (사업자부담)</td><td class="num">${fmt(totalIns)}원</td><td>-</td></tr>
+    <tr><td>전체 직원 퇴직금 연간 추계</td><td class="num">${fmt(totalRet)}원</td><td>-</td></tr>
+    <tr><td class="bold">실지급 기준 연간 합계 (급여+4보험+퇴직금)</td><td class="num bold">${fmt(totalE+totalIns+totalRet)}원</td><td>-</td></tr>
   </tbody></table>
 
-  <div class="section">과제별 인건비 현황</div>
+  <div class="section">② 과제별 인건비 현황</div>
   <table><thead><tr><th>과제명</th><th>유형</th><th class="num">예산</th><th class="num">집행예정</th><th class="num">잔여</th><th class="num">소진율</th></tr></thead>
   <tbody>${S.projects.map(proj=>{
     const exec=projAnn(proj.id), p=pct(exec,proj.budget), rem=proj.budget-exec;
@@ -3017,23 +3156,34 @@ function printPDF() {
       <td class="num">${fmt(proj.budget)}</td>
       <td class="num ${p>100?'over':'ok'}">${fmt(exec)}</td>
       <td class="num">${fmt(rem)}</td>
-      <td class="num ${p>100?'over':p>90?'':'ok'}">${p}%</td>
+      <td class="num ${p>100?'over':p>90?'warn':'ok'}">${p}%</td>
     </tr>`;
   }).join('')}</tbody></table>
 
-  <div class="section">직원별 참여 현황</div>
-  <table><thead><tr><th>직원</th><th>직급</th><th>참여 과제</th><th class="num">최대 유효참여율</th><th>3책</th><th>5공</th><th>상태</th></tr></thead>
+  <div class="section pagebreak">③ 과제별 월별 집행 예정액</div>
+  <table><thead>
+    <tr><th rowspan="2">과제명</th>${MN.map(m=>`<th class="num">${m}</th>`).join('')}<th class="num">연간합계</th><th class="num">잔여예산</th><th class="num">소진율</th></tr>
+  </thead><tbody>${projMonthHtml}</tbody></table>
+
+  <div class="section pagebreak">④ 직원별 인건비 상세 (급여·4대보험·퇴직금)</div>
+  <table><thead>
+    <tr><th rowspan="2">직원</th><th rowspan="2">직급</th>${mnHeader3}<th class="num" colspan="3">연간합계</th><th class="num" rowspan="2">총계</th></tr>
+    <tr>${mnSubHeader}<th class="num sub-num">급여계</th><th class="num sub-num">4보험계</th><th class="num sub-num">퇴직금계</th></tr>
+  </thead><tbody>${empSalHtml}</tbody></table>
+
+  <div class="section pagebreak">⑤ 직원별 참여 현황</div>
+  <table><thead><tr><th>직원</th><th>직급</th><th>참여 과제</th><th class="num">최대유효참여율</th><th>3책</th><th>5공</th><th>상태</th></tr></thead>
   <tbody>${S.employees.map(emp=>{
     const mx=Math.max(...Array.from({length:12},(_,m)=>effRate(emp.id,m)));
     const{chief,joint}=get345(emp.id);
     const projs=Object.keys(yPart()[emp.id]||{}).map(pid=>S.projects.find(p=>p.id===pid)?.name||pid).join(', ');
     return `<tr>
       <td>${emp.name}</td><td>${emp.rank}</td>
-      <td style="max-width:200px">${projs||'-'}</td>
+      <td>${projs||'-'}</td>
       <td class="num ${mx>100?'over':''}">${mx}%</td>
       <td class="num ${chief>3?'over':''}">${chief}/3</td>
       <td class="num ${joint>5?'over':''}">${joint}/5</td>
-      <td>${chief>3||joint>5||mx>100?'<b style="color:#c00">오류</b>':'정상'}</td>
+      <td>${chief>3||joint>5||mx>100?'<b style="color:#c00">오류</b>':'<span style="color:#080">정상</span>'}</td>
     </tr>`;
   }).join('')}</tbody></table>
   <script>window.print();<\/script>
