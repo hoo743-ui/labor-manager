@@ -284,6 +284,45 @@ input[type=range]#pop-slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
 .onboard-num{width:28px;height:28px;border-radius:50%;background:var(--acc);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
 .onboard-step.done .onboard-num{background:var(--grn)}
 
+/* ── AI 챗봇 ── */
+#ai-fab{position:fixed;bottom:24px;right:24px;z-index:250;width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,var(--acc),var(--pur));border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 4px 18px rgba(79,142,247,0.45);transition:transform .18s,box-shadow .18s}
+#ai-fab:hover{transform:scale(1.1);box-shadow:0 6px 24px rgba(79,142,247,0.6)}
+#ai-fab .ai-fab-dot{position:absolute;top:2px;right:2px;width:10px;height:10px;border-radius:50%;background:var(--grn);border:2px solid var(--bg);display:none}
+#ai-panel{position:fixed;bottom:80px;right:24px;z-index:250;width:360px;max-height:560px;background:var(--sf);border:1px solid var(--b2);border-radius:16px;display:flex;flex-direction:column;box-shadow:0 16px 48px rgba(0,0,0,.6);transition:opacity .2s,transform .2s;opacity:0;transform:translateY(12px) scale(.97);pointer-events:none}
+#ai-panel.open{opacity:1;transform:translateY(0) scale(1);pointer-events:all}
+.ai-panel-hd{display:flex;align-items:center;gap:10px;padding:13px 16px;border-bottom:1px solid var(--b);flex-shrink:0;border-radius:16px 16px 0 0}
+.ai-panel-avatar{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--acc),var(--pur));display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.ai-panel-title{font-size:13px;font-weight:700;flex:1}
+.ai-panel-sub{font-size:10px;color:var(--tx3)}
+.ai-panel-close{background:none;border:none;color:var(--tx3);cursor:pointer;font-size:17px;padding:0;line-height:1}
+.ai-panel-close:hover{color:var(--tx)}
+.ai-msgs{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-height:0}
+.ai-msg{max-width:88%;padding:8px 11px;border-radius:10px;font-size:12px;line-height:1.55;word-break:keep-all}
+.ai-msg.user{background:rgba(79,142,247,0.18);border:1px solid rgba(79,142,247,0.25);align-self:flex-end;color:var(--tx)}
+.ai-msg.bot{background:var(--sf2);border:1px solid var(--b);align-self:flex-start;color:var(--tx)}
+.ai-msg.bot code{background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:3px;font-size:11px;font-family:var(--mono)}
+.ai-msg-time{font-size:9px;color:var(--tx3);margin-top:3px;text-align:right}
+.ai-typing{display:flex;gap:4px;align-items:center;padding:8px 11px;background:var(--sf2);border:1px solid var(--b);border-radius:10px;align-self:flex-start}
+.ai-typing span{width:6px;height:6px;border-radius:50%;background:var(--tx3);animation:aiDot 1.2s infinite}
+.ai-typing span:nth-child(2){animation-delay:.2s}
+.ai-typing span:nth-child(3){animation-delay:.4s}
+@keyframes aiDot{0%,60%,100%{transform:translateY(0);opacity:.5}30%{transform:translateY(-5px);opacity:1}}
+.ai-input-wrap{display:flex;gap:6px;padding:10px 12px;border-top:1px solid var(--b);flex-shrink:0;border-radius:0 0 16px 16px}
+#ai-input{flex:1;background:var(--sf2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:7px 10px;font-size:12px;font-family:var(--sans);outline:none;resize:none;max-height:80px;line-height:1.4}
+#ai-input:focus{border-color:var(--acc)}
+#ai-send{background:var(--acc);border:none;border-radius:8px;color:#fff;cursor:pointer;padding:0 12px;font-size:14px;transition:background .15s;flex-shrink:0}
+#ai-send:hover{background:var(--acc2)}
+#ai-send:disabled{opacity:.4;cursor:not-allowed}
+.ai-key-wrap{padding:10px 14px;border-bottom:1px solid var(--b);display:flex;gap:6px;align-items:center}
+.ai-key-wrap input{flex:1;background:var(--sf2);border:1px solid var(--b);color:var(--tx);border-radius:6px;padding:5px 8px;font-size:11px;font-family:var(--mono);outline:none}
+.ai-key-wrap input:focus{border-color:var(--acc)}
+.ai-key-wrap button{background:var(--sf3);border:1px solid var(--b2);color:var(--tx2);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;white-space:nowrap}
+.ai-key-wrap button:hover{color:var(--tx)}
+.ai-chips{display:flex;gap:5px;flex-wrap:wrap;padding:8px 14px 0;flex-shrink:0}
+.ai-chip{padding:3px 9px;border-radius:99px;border:1px solid var(--b2);background:none;color:var(--tx3);font-size:10px;font-family:var(--sans);cursor:pointer;transition:all .12s;white-space:nowrap}
+.ai-chip:hover{border-color:var(--acc);color:var(--acc);background:rgba(79,142,247,0.08)}
+@media(max-width:768px){#ai-panel{width:calc(100vw - 32px);right:16px}#ai-fab{bottom:16px;right:16px}}
+
 </style>
 </head>
 <body>
@@ -648,6 +687,36 @@ input[type=range]#pop-slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
 </div>
 
 <div id="toast"></div>
+
+<!-- ── AI 가이드 챗봇 ── -->
+<button id="ai-fab" onclick="toggleAiPanel()" title="AI 가이드 도우미">
+  🤖<span class="ai-fab-dot" id="ai-fab-dot"></span>
+</button>
+<div id="ai-panel">
+  <div class="ai-panel-hd">
+    <div class="ai-panel-avatar">🤖</div>
+    <div style="flex:1"><div class="ai-panel-title">RMS 가이드 AI</div><div class="ai-panel-sub" id="ai-status-txt">Claude 기반 · 질문하면 바로 답해드려요</div></div>
+    <button class="ai-panel-close" onclick="toggleAiPanel()">×</button>
+  </div>
+  <div class="ai-key-wrap" id="ai-key-row">
+    <input type="password" id="ai-key-input" placeholder="Claude API Key (sk-ant-...)" autocomplete="off">
+    <button onclick="saveAiKey()">저장</button>
+    <button onclick="clearAiKey()" style="color:var(--red)">삭제</button>
+  </div>
+  <div class="ai-chips" id="ai-chips">
+    <button class="ai-chip" onclick="aiAsk('3책5공 규정이 뭔가요?')">3책5공 규정</button>
+    <button class="ai-chip" onclick="aiAsk('유효참여율 계산 방법을 알려줘')">유효참여율</button>
+    <button class="ai-chip" onclick="aiAsk('현재 오류나 초과 항목 있어?')">오류 확인</button>
+    <button class="ai-chip" onclick="aiAsk('직원 등록은 어떻게 해?')">직원 등록</button>
+    <button class="ai-chip" onclick="aiAsk('과제별 잔여 예산 요약해줘')">예산 현황</button>
+    <button class="ai-chip" onclick="aiAsk('엑셀 내보내기 어떻게 써?')">내보내기</button>
+  </div>
+  <div class="ai-msgs" id="ai-msgs"></div>
+  <div class="ai-input-wrap">
+    <textarea id="ai-input" rows="1" placeholder="질문을 입력하세요..." onkeydown="aiKeyDown(event)" oninput="aiAutoResize(this)"></textarea>
+    <button id="ai-send" onclick="aiSend()">↑</button>
+  </div>
+</div>
 
 <!-- JS 모듈 (순서 중요) -->
 
@@ -4143,7 +4212,209 @@ document.addEventListener('DOMContentLoaded', () => {
   if (['dash','proj','emp','salary','master','history','tips'].includes(hash)) S.view = hash;
 
   render();
+
+  // AI 챗봇 초기화
+  aiInit();
 });
-</script>
+
+// ══════════════════════════════════════════════
+// AI 가이드 챗봇
+// ══════════════════════════════════════════════
+const AI = {
+  open: false,
+  history: [],   // {role, content}
+  loading: false,
+  key: ''
+};
+
+function aiInit() {
+  AI.key = localStorage.getItem('rms-claude-key') || '';
+  const keyRow = document.getElementById('ai-key-row');
+  if (keyRow) keyRow.style.display = AI.key ? 'none' : 'flex';
+  if (AI.key) {
+    document.getElementById('ai-fab-dot').style.display = 'block';
+    document.getElementById('ai-status-txt').textContent = 'Claude 연결됨 · 질문해보세요';
+  }
+  // 첫 인사 메시지
+  aiAppendMsg('bot', `안녕하세요! **RMS 가이드 AI**입니다. 🎉\n\n이 프로그램 사용법, 규정 해석, 현재 데이터 현황 등 무엇이든 물어보세요.\n\n아래 빠른 질문 버튼을 눌러도 되고, 직접 입력해도 됩니다.`);
+}
+
+function toggleAiPanel() {
+  AI.open = !AI.open;
+  document.getElementById('ai-panel').classList.toggle('open', AI.open);
+  if (AI.open) setTimeout(()=>document.getElementById('ai-input').focus(), 200);
+}
+
+function saveAiKey() {
+  const v = document.getElementById('ai-key-input').value.trim();
+  if (!v.startsWith('sk-ant-')) { toast('⚠ API 키 형식이 올바르지 않습니다 (sk-ant-...)'); return; }
+  AI.key = v;
+  localStorage.setItem('rms-claude-key', v);
+  document.getElementById('ai-key-row').style.display = 'none';
+  document.getElementById('ai-fab-dot').style.display = 'block';
+  document.getElementById('ai-status-txt').textContent = 'Claude 연결됨 · 질문해보세요';
+  document.getElementById('ai-key-input').value = '';
+  toast('✓ API 키 저장됨');
+}
+
+function clearAiKey() {
+  AI.key = '';
+  localStorage.removeItem('rms-claude-key');
+  document.getElementById('ai-key-row').style.display = 'flex';
+  document.getElementById('ai-fab-dot').style.display = 'none';
+  document.getElementById('ai-status-txt').textContent = 'API 키를 입력해주세요';
+  toast('API 키 삭제됨');
+}
+
+function aiKeyDown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); aiSend(); }
+}
+
+function aiAutoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 80) + 'px';
+}
+
+function aiAppendMsg(role, text) {
+  const msgs = document.getElementById('ai-msgs');
+  if (!msgs) return;
+  const div = document.createElement('div');
+  div.className = `ai-msg ${role}`;
+  // 간단한 마크다운 렌더링 (굵게, 코드)
+  const html = text
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')
+    .replace(/`([^`]+)`/g,'<code>$1</code>')
+    .replace(/\n/g,'<br>');
+  const now = new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+  div.innerHTML = `${html}<div class="ai-msg-time">${now}</div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function aiShowTyping() {
+  const msgs = document.getElementById('ai-msgs');
+  const el = document.createElement('div');
+  el.className = 'ai-typing'; el.id = 'ai-typing';
+  el.innerHTML = '<span></span><span></span><span></span>';
+  msgs.appendChild(el);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function aiHideTyping() {
+  document.getElementById('ai-typing')?.remove();
+}
+
+// 현재 앱 데이터 요약 (시스템 프롬프트에 주입)
+function aiDataContext() {
+  const totalB = S.projects.reduce((s,p)=>s+p.budget,0);
+  const totalE = S.projects.reduce((s,p)=>s+projAnn(p.id),0);
+  const alerts = allAlerts ? allAlerts() : [];
+  const errs = alerts.filter(a=>a.t==='err').length;
+  const warns = alerts.filter(a=>a.t==='warn').length;
+  const empLines = S.employees.map(e=>{
+    const mx=Math.max(0,...Array.from({length:12},(_,m)=>effRate(e.id,m)));
+    const {chief,joint}=get345(e.id);
+    return `- ${e.name}(${e.rank||'-'}): 최대참여율${mx}%, 책임${chief}/공동${joint}, 기본급${fmtM(e.baseSalary)}`;
+  }).join('\n');
+  const projLines = S.projects.map(p=>{
+    const exec=projAnn(p.id), r=pct(exec,p.budget);
+    return `- ${p.name}(${p.type}): 예산${fmtM(p.budget)}, 집행${fmtM(exec)}(${r}%), 잔여${fmtM(p.budget-exec)}`;
+  }).join('\n');
+
+  return `## 현재 데이터 현황 (${S.year}년)
+직원 수: ${S.employees.length}명 / 과제 수: ${S.projects.length}개
+총 예산: ${fmtM(totalB)} / 집행예정: ${fmtM(totalE)}(${pct(totalE,totalB)}%) / 오류:${errs}건 경고:${warns}건
+
+### 직원별 요약
+${empLines||'(등록 없음)'}
+
+### 과제별 요약
+${projLines||'(등록 없음)'}`;
+}
+
+const AI_SYSTEM = `당신은 연구과제 인건비 관리 프로그램(RMS)의 전문 가이드 AI입니다.
+이 프로그램의 주요 기능:
+- 연구과제별 인건비 예산 관리 및 집행 현황 추적
+- 직원별 월별 참여율 입력·관리 (셀 클릭 → 슬라이더 팝업)
+- 3책5공 규정 자동 체크: 책임연구원 최대 3개 과제, 공동연구원 최대 5개 과제
+- 유효참여율 100% 초과 자동 경고 (RMS/특정사업 제외)
+- 4대보험(사업자부담) + 퇴직금 자동 추계 → 최대 지급 가능액 계산
+- 엑셀 가져오기/내보내기, PDF 인쇄, 데이터 DB 저장 동기화
+
+답변 원칙:
+1. 한국어로 간결하게 답변
+2. 프로그램 사용법 질문엔 구체적인 탭명·버튼명 안내
+3. 현재 데이터 현황을 참고해 맞춤 답변
+4. 규정(3책5공, 참여율 한도 등) 질문엔 정확한 수치 제공
+5. 계산 관련 질문엔 공식 명시`;
+
+async function aiAsk(text) {
+  if (!AI.open) toggleAiPanel();
+  document.getElementById('ai-input').value = text;
+  await aiSend();
+}
+
+async function aiSend() {
+  const input = document.getElementById('ai-input');
+  const text = input.value.trim();
+  if (!text || AI.loading) return;
+
+  if (!AI.key) {
+    aiAppendMsg('bot', '⚠ Claude API 키를 먼저 입력해주세요.\n상단 입력창에 `sk-ant-...` 형식의 키를 입력하고 **저장** 버튼을 눌러주세요.');
+    document.getElementById('ai-key-row').style.display = 'flex';
+    return;
+  }
+
+  // UI 업데이트
+  input.value = ''; input.style.height = 'auto';
+  aiAppendMsg('user', text);
+  AI.history.push({ role: 'user', content: text });
+  if (AI.history.length > 20) AI.history = AI.history.slice(-20); // 최대 20턴
+
+  AI.loading = true;
+  document.getElementById('ai-send').disabled = true;
+  aiShowTyping();
+
+  try {
+    const systemWithData = AI_SYSTEM + '\n\n' + aiDataContext();
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': AI.key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 1024,
+        system: systemWithData,
+        messages: AI.history
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(()=>({error:{message:res.statusText}}));
+      throw new Error(err.error?.message || `HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+    const reply = data.content?.[0]?.text || '(빈 응답)';
+    AI.history.push({ role: 'assistant', content: reply });
+    aiHideTyping();
+    aiAppendMsg('bot', reply);
+  } catch(e) {
+    aiHideTyping();
+    const msg = e.message.includes('401') ? '⚠ API 키가 올바르지 않습니다. 키를 다시 확인해주세요.'
+      : e.message.includes('429') ? '⚠ 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.'
+      : `⚠ 오류가 발생했습니다: ${e.message}`;
+    aiAppendMsg('bot', msg);
+  } finally {
+    AI.loading = false;
+    document.getElementById('ai-send').disabled = false;
+    document.getElementById('ai-input').focus();
+  }
+}
 </body>
 </html>
