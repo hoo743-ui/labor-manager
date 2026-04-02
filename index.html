@@ -3071,123 +3071,196 @@ function printPDF() {
   const totalE = S.projects.reduce((s,p)=>s+projAnn(p.id),0);
   const totalIns = S.employees.reduce((s,e)=>{ let t=0; for(let m=0;m<12;m++)t+=calcInsurance(getSal(e.id,m)); return s+t; },0);
   const totalRet = S.employees.reduce((s,e)=>{ let t=0; for(let m=0;m<12;m++)t+=calcRetirement(e.id,getSal(e.id,m),S.year,m); return s+t; },0);
+  const W = n => n>=100000000?(n/100000000).toFixed(1)+'억':n>=10000?Math.round(n/10000)+'만':String(Math.round(n)); // 만원 단위 약식
 
-  // ── 과제별 월별 집행 현황 HTML
-  const projMonthHtml = S.projects.map(proj=>{
-    const monthCols = Array.from({length:12},(_,m)=>{
-      const v = S.employees.reduce((s,e)=>s+mExec(e.id,proj.id,m),0);
-      return `<td class="num">${v>0?fmt(v):'-'}</td>`;
-    }).join('');
-    const ann = projAnn(proj.id);
-    const p = pct(ann,proj.budget);
-    return `<tr>
-      <td>${proj.name}</td>
-      ${monthCols}
-      <td class="num ${p>100?'over':'ok'}">${fmt(ann)}</td>
-      <td class="num">${fmt(proj.budget-ann)}</td>
-      <td class="num ${p>100?'over':p>90?'warn':'ok'}">${p}%</td>
-    </tr>`;
-  }).join('');
-
-  // ── 직원별 인건비 상세 HTML
-  const empSalHtml = S.employees.map(emp=>{
-    let basSum=0,insSum=0,retSum=0,totSum=0;
-    const cells = Array.from({length:12},(_,m)=>{
-      const sal=getSal(emp.id,m), ins=calcInsurance(sal), ret=calcRetirement(emp.id,sal,S.year,m), tot=sal+ins+ret;
-      basSum+=sal; insSum+=ins; retSum+=ret; totSum+=tot;
-      return `<td class="num">${fmt(sal)}</td><td class="num sub-num">${fmt(ins)}</td><td class="num sub-num">${fmt(ret)}</td>`;
-    }).join('');
-    return `<tr>
-      <td rowspan="1">${emp.name}</td><td>${emp.rank}</td>
-      ${cells}
-      <td class="num bold">${fmt(basSum)}</td>
-      <td class="num sub-num">${fmt(insSum)}</td>
-      <td class="num sub-num">${fmt(retSum)}</td>
-      <td class="num bold">${fmt(totSum)}</td>
-    </tr>`;
-  }).join('');
-
-  // ── 월 헤더 (1월~12월 × 3열)
-  const mnHeader3 = MN.map(m=>`<th class="num" colspan="3">${m}</th>`).join('');
-  const mnSubHeader = MN.map(()=>`<th class="num sub-num">급여</th><th class="num sub-num">4보험</th><th class="num sub-num">퇴직금</th>`).join('');
-
-  printWin.document.write(`<!DOCTYPE html><html lang="ko"><head>
-  <meta charset="UTF-8">
-  <title>연구과제 인건비 현황 — ${S.year}년</title>
-  <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:'Noto Sans KR',sans-serif;font-size:11px;color:#111;padding:20px}
-    h1{font-size:15px;font-weight:700;margin-bottom:3px}
-    .sub{font-size:10px;color:#666;margin-bottom:16px}
-    table{width:100%;border-collapse:collapse;margin-bottom:18px;font-size:10px}
-    th{background:#e8e8e8;padding:5px 6px;text-align:left;font-weight:600;border:1px solid #bbb;white-space:nowrap}
-    td{padding:4px 6px;border:1px solid #ddd;white-space:nowrap}
-    .num{text-align:right;font-family:monospace}
-    .sub-num{text-align:right;font-family:monospace;color:#555;background:#fafafa}
-    .bold{font-weight:700}
-    .over{color:#c00;font-weight:700}
-    .warn{color:#b06000}
-    .ok{color:#080}
-    .section{font-size:12px;font-weight:700;margin:14px 0 6px;padding-bottom:3px;border-bottom:2px solid #333}
-    .pagebreak{page-break-before:always}
-    @media print{body{padding:8px}th{background:#ddd!important;-webkit-print-color-adjust:exact}}
-  </style></head><body>
-  <h1>연구과제 인건비 현황</h1>
-  <div class="sub">${S.year}년 기준 · 출력일시: ${new Date().toLocaleString('ko-KR')}</div>
-
-  <div class="section">① 전체 요약</div>
-  <table style="max-width:500px"><thead><tr><th>구분</th><th class="num">금액</th><th class="num">비고</th></tr></thead>
-  <tbody>
-    <tr><td>총 인건비 예산 (과제 합산)</td><td class="num bold">${fmt(totalB)}원</td><td>-</td></tr>
-    <tr><td>연간 집행 예정 (기본급 기준)</td><td class="num ${pct(totalE,totalB)>100?'over':'ok'}">${fmt(totalE)}원</td><td class="num ${pct(totalE,totalB)>100?'over':'ok'}">${pct(totalE,totalB)}%</td></tr>
-    <tr><td>잔여 예산</td><td class="num">${fmt(totalB-totalE)}원</td><td>-</td></tr>
-    <tr><td>전체 직원 4대보험 연간 추계 (사업자부담)</td><td class="num">${fmt(totalIns)}원</td><td>-</td></tr>
-    <tr><td>전체 직원 퇴직금 연간 추계</td><td class="num">${fmt(totalRet)}원</td><td>-</td></tr>
-    <tr><td class="bold">실지급 기준 연간 합계 (급여+4보험+퇴직금)</td><td class="num bold">${fmt(totalE+totalIns+totalRet)}원</td><td>-</td></tr>
-  </tbody></table>
-
-  <div class="section">② 과제별 인건비 현황</div>
-  <table><thead><tr><th>과제명</th><th>유형</th><th class="num">예산</th><th class="num">집행예정</th><th class="num">잔여</th><th class="num">소진율</th></tr></thead>
-  <tbody>${S.projects.map(proj=>{
+  // ── ② 과제별 요약 행
+  const projSumHtml = S.projects.map(proj=>{
     const exec=projAnn(proj.id), p=pct(exec,proj.budget), rem=proj.budget-exec;
     return `<tr>
       <td>${proj.name}</td>
-      <td>${proj.type==='cosd'?'RMS':proj.type==='special'?'특정':'일반'}</td>
+      <td class="ctr">${proj.type==='cosd'?'RMS':proj.type==='special'?'특정':'일반'}</td>
       <td class="num">${fmt(proj.budget)}</td>
       <td class="num ${p>100?'over':'ok'}">${fmt(exec)}</td>
       <td class="num">${fmt(rem)}</td>
-      <td class="num ${p>100?'over':p>90?'warn':'ok'}">${p}%</td>
+      <td class="num ctr ${p>100?'over':p>90?'warn':'ok'}">${p}%</td>
     </tr>`;
-  }).join('')}</tbody></table>
+  }).join('');
 
-  <div class="section pagebreak">③ 과제별 월별 집행 예정액</div>
-  <table><thead>
-    <tr><th rowspan="2">과제명</th>${MN.map(m=>`<th class="num">${m}</th>`).join('')}<th class="num">연간합계</th><th class="num">잔여예산</th><th class="num">소진율</th></tr>
-  </thead><tbody>${projMonthHtml}</tbody></table>
-
-  <div class="section pagebreak">④ 직원별 인건비 상세 (급여·4대보험·퇴직금)</div>
-  <table><thead>
-    <tr><th rowspan="2">직원</th><th rowspan="2">직급</th>${mnHeader3}<th class="num" colspan="3">연간합계</th><th class="num" rowspan="2">총계</th></tr>
-    <tr>${mnSubHeader}<th class="num sub-num">급여계</th><th class="num sub-num">4보험계</th><th class="num sub-num">퇴직금계</th></tr>
-  </thead><tbody>${empSalHtml}</tbody></table>
-
-  <div class="section pagebreak">⑤ 직원별 참여 현황</div>
-  <table><thead><tr><th>직원</th><th>직급</th><th>참여 과제</th><th class="num">최대유효참여율</th><th>3책</th><th>5공</th><th>상태</th></tr></thead>
-  <tbody>${S.employees.map(emp=>{
-    const mx=Math.max(...Array.from({length:12},(_,m)=>effRate(emp.id,m)));
-    const{chief,joint}=get345(emp.id);
-    const projs=Object.keys(yPart()[emp.id]||{}).map(pid=>S.projects.find(p=>p.id===pid)?.name||pid).join(', ');
+  // ── ③ 과제별 월별 집행 (가로형 — 만원 약식)
+  const projMonthHtml = S.projects.map(proj=>{
+    const mVals = Array.from({length:12},(_,m)=>S.employees.reduce((s,e)=>s+mExec(e.id,proj.id,m),0));
+    const ann = mVals.reduce((a,b)=>a+b,0);
+    const p = pct(ann,proj.budget);
     return `<tr>
-      <td>${emp.name}</td><td>${emp.rank}</td>
-      <td>${projs||'-'}</td>
-      <td class="num ${mx>100?'over':''}">${mx}%</td>
-      <td class="num ${chief>3?'over':''}">${chief}/3</td>
-      <td class="num ${joint>5?'over':''}">${joint}/5</td>
-      <td>${chief>3||joint>5||mx>100?'<b style="color:#c00">오류</b>':'<span style="color:#080">정상</span>'}</td>
+      <td class="proj-name">${proj.name}</td>
+      ${mVals.map(v=>`<td class="num">${v>0?W(v):'-'}</td>`).join('')}
+      <td class="num bold ${p>100?'over':'ok'}">${W(ann)}</td>
+      <td class="num">${W(proj.budget-ann)}</td>
+      <td class="num ctr ${p>100?'over':p>90?'warn':'ok'}">${p}%</td>
     </tr>`;
-  }).join('')}</tbody></table>
-  <script>window.print();<\/script>
-  </body></html>`);
+  }).join('');
+
+  // ── ④ 직원별 인건비 카드 (세로형 — 직원 1명당 작은 표)
+  const empCardHtml = S.employees.map(emp=>{
+    let bS=0,iS=0,rS=0;
+    const rows = Array.from({length:12},(_,m)=>{
+      const sal=getSal(emp.id,m), ins=calcInsurance(sal), ret=calcRetirement(emp.id,sal,S.year,m);
+      bS+=sal; iS+=ins; rS+=ret;
+      const cfm=isCfm(emp.id,m);
+      return `<tr${cfm?' class="cfm-row"':''}>
+        <td>${m+1}월${cfm?' ★':''}</td>
+        <td class="num">${W(sal)}</td>
+        <td class="num s2">${W(ins)}</td>
+        <td class="num s2">${W(ret)}</td>
+        <td class="num bold">${W(sal+ins+ret)}</td>
+      </tr>`;
+    }).join('');
+    return `<div class="emp-card">
+      <div class="emp-card-hd">${emp.name} <span class="rank">${emp.rank||''}</span></div>
+      <table>
+        <thead><tr><th>월</th><th class="num">급여</th><th class="num s2">4보험</th><th class="num s2">퇴직금</th><th class="num">합계</th></tr></thead>
+        <tbody>
+          ${rows}
+          <tr class="sum-row">
+            <td><b>합계</b></td>
+            <td class="num bold">${W(bS)}</td>
+            <td class="num s2">${W(iS)}</td>
+            <td class="num s2">${W(rS)}</td>
+            <td class="num bold">${W(bS+iS+rS)}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>`;
+  }).join('');
+
+  // ── ⑤ 직원별 참여 현황
+  const empPartHtml = S.employees.map(emp=>{
+    const mx=Math.max(0,...Array.from({length:12},(_,m)=>effRate(emp.id,m)));
+    const{chief,joint}=get345(emp.id);
+    const projs=Object.keys(yPart()[emp.id]||{}).map(pid=>S.projects.find(p=>p.id===pid)?.name||pid);
+    const err=chief>3||joint>5||mx>100;
+    return `<tr${err?' class="err-row"':''}>
+      <td>${emp.name}</td><td class="ctr">${emp.rank}</td>
+      <td>${projs.join('<br>')||'-'}</td>
+      <td class="num ctr ${mx>100?'over':''}">${mx}%</td>
+      <td class="num ctr ${chief>3?'over':''}">${chief}/3</td>
+      <td class="num ctr ${joint>5?'over':''}">${joint}/5</td>
+      <td class="ctr">${err?'<b class="over">오류</b>':'<span class="ok">정상</span>'}</td>
+    </tr>`;
+  }).join('');
+
+  printWin.document.write(`<!DOCTYPE html><html lang="ko"><head>
+<meta charset="UTF-8">
+<title>연구과제 인건비 현황 — ${S.year}년</title>
+<style>
+  @page { size: A4 landscape; margin: 10mm 12mm; }
+  @page :first { size: A4 portrait; margin: 14mm 16mm; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Noto Sans KR',sans-serif;font-size:11px;color:#111}
+  h1{font-size:16px;font-weight:700;margin-bottom:2px}
+  .meta{font-size:10px;color:#666;margin-bottom:14px;display:flex;gap:16px;align-items:center}
+  .badge{display:inline-block;background:#1a4a9a;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;letter-spacing:.04em}
+
+  /* ── 섹션 타이틀 ── */
+  .sec{font-size:12px;font-weight:700;margin:14px 0 6px;padding:4px 8px;background:#1a4a9a;color:#fff;border-radius:3px;page-break-after:avoid}
+  .landscape-start{page-break-before:always}
+
+  /* ── 기본 테이블 ── */
+  table{width:100%;border-collapse:collapse;margin-bottom:14px;font-size:10px}
+  thead{display:table-header-group}
+  th{background:#dce8f5;padding:5px 6px;text-align:left;font-weight:600;border:1px solid #aac;white-space:nowrap;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  td{padding:4px 6px;border:1px solid #d4d8e0;white-space:nowrap;vertical-align:middle}
+  tr{page-break-inside:avoid}
+  .num{text-align:right;font-family:'Courier New',monospace}
+  .ctr{text-align:center}
+  .bold{font-weight:700}
+  .s2{color:#444;background:#f7f7fb;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .over{color:#b00;font-weight:700}
+  .warn{color:#995500}
+  .ok{color:#006600}
+  .err-row td{background:#fff5f5}
+  .cfm-row td{background:#f0f7f0}
+  .sum-row td{background:#eef2fa;font-weight:600;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .proj-name{max-width:160px;white-space:normal;word-break:keep-all;font-size:9px}
+
+  /* ── 요약 카드 (①) ── */
+  .summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+  .sum-card{border:1px solid #bcd;border-radius:5px;padding:10px 12px;background:#f4f8ff}
+  .sum-card-label{font-size:9px;color:#557;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+  .sum-card-val{font-size:17px;font-weight:700;font-family:'Courier New',monospace;color:#112}
+  .sum-card-sub{font-size:9px;color:#666;margin-top:3px}
+  .sum-card.hi{background:#fff3e0;border-color:#f0b050}
+  .sum-card.red{background:#fff0f0;border-color:#e08080}
+
+  /* ── 직원 카드 (④) ── */
+  .emp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .emp-card{border:1px solid #ccd;border-radius:5px;padding:8px;break-inside:avoid}
+  .emp-card-hd{font-weight:700;font-size:11px;padding:4px 6px;background:#dce8f5;border-radius:3px;margin-bottom:5px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .emp-card table{margin-bottom:0;font-size:9.5px}
+  .rank{font-weight:400;color:#555;font-size:9px;margin-left:4px}
+
+  /* ── 인쇄 전용 ── */
+  @media print{
+    .landscape-start{page-break-before:always}
+    a{text-decoration:none;color:inherit}
+  }
+</style></head><body>
+
+<h1>연구과제 인건비 현황</h1>
+<div class="meta">
+  <span class="badge">RMS</span>
+  <span>${S.year}년 기준</span>
+  <span>출력일시: ${new Date().toLocaleString('ko-KR')}</span>
+  <span style="margin-left:auto;font-size:9px;color:#999">★ = 급여확정월 · 만원 단위 약식표기</span>
+</div>
+
+<!-- ① 전체 요약 -->
+<div class="sec">① 전체 요약</div>
+<div class="summary-grid">
+  <div class="sum-card"><div class="sum-card-label">총 인건비 예산</div><div class="sum-card-val">${fmt(totalB)}원</div><div class="sum-card-sub">등록 과제 전체 합산</div></div>
+  <div class="sum-card ${pct(totalE,totalB)>100?'red':''}"><div class="sum-card-label">연간 집행 예정 (기본급 기준)</div><div class="sum-card-val ${pct(totalE,totalB)>100?'over':''}">${fmt(totalE)}원</div><div class="sum-card-sub">소진율 ${pct(totalE,totalB)}% · 잔여 ${fmt(totalB-totalE)}원</div></div>
+  <div class="sum-card hi"><div class="sum-card-label">4대보험 연간 추계 (사업자부담)</div><div class="sum-card-val">${fmt(totalIns)}원</div><div class="sum-card-sub">집행예정의 약 ${pct(totalIns,totalE)}%</div></div>
+  <div class="sum-card hi"><div class="sum-card-label">퇴직금 연간 추계</div><div class="sum-card-val">${fmt(totalRet)}원</div><div class="sum-card-sub">입사 1년 이상 직원 합산</div></div>
+</div>
+<table style="max-width:480px;font-size:11px">
+  <thead><tr><th>구분</th><th class="num">금액</th></tr></thead>
+  <tbody>
+    <tr><td>집행예정 + 4대보험 + 퇴직금</td><td class="num bold">${fmt(totalE+totalIns+totalRet)}원</td></tr>
+    <tr><td style="color:#555">· 집행예정 대비 부담 추가 비율</td><td class="num">${totalE?Math.round((totalIns+totalRet)/totalE*100):0}%</td></tr>
+  </tbody>
+</table>
+
+<!-- ② 과제별 인건비 현황 -->
+<div class="sec">② 과제별 인건비 현황</div>
+<table>
+  <thead><tr><th>과제명</th><th class="ctr">유형</th><th class="num">예산</th><th class="num">집행예정</th><th class="num">잔여예산</th><th class="num ctr">소진율</th></tr></thead>
+  <tbody>${projSumHtml}</tbody>
+</table>
+
+<!-- ③ 과제별 월별 집행 예정액 (가로형·만원단위) -->
+<div class="sec landscape-start">③ 과제별 월별 집행 예정액 <span style="font-weight:400;font-size:9px">(단위: 만원)</span></div>
+<table>
+  <thead><tr>
+    <th style="min-width:100px">과제명</th>
+    ${MN.map(m=>`<th class="num">${m.replace('월','')}</th>`).join('')}
+    <th class="num">연간</th><th class="num">잔여</th><th class="num ctr">%</th>
+  </tr></thead>
+  <tbody>${projMonthHtml}</tbody>
+</table>
+
+<!-- ④ 직원별 인건비 상세 (직원 카드 3열) -->
+<div class="sec landscape-start">④ 직원별 인건비 상세 <span style="font-weight:400;font-size:9px">(단위: 만원 · ★=급여확정월)</span></div>
+<div class="emp-grid">${empCardHtml}</div>
+
+<!-- ⑤ 직원별 참여 현황 -->
+<div class="sec landscape-start">⑤ 직원별 참여 현황</div>
+<table>
+  <thead><tr><th>직원</th><th class="ctr">직급</th><th>참여 과제</th><th class="num ctr">최대유효<br>참여율</th><th class="ctr">3책</th><th class="ctr">5공</th><th class="ctr">상태</th></tr></thead>
+  <tbody>${empPartHtml}</tbody>
+</table>
+
+<script>window.print();<\/script>
+</body></html>`);
   printWin.document.close();
   addHistory('PDF 출력', `${S.year}년 현황 출력`);
 }
