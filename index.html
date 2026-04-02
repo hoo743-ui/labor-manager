@@ -679,6 +679,7 @@ const S = {
   selSalProj: null,
   projFilter: 'all',
   projSearch: '',
+  salBreakdown: false,
   salEmpOpen: false,
   empSearch: '',
   year: new Date().getFullYear(),
@@ -1701,20 +1702,80 @@ function renderSalary(){
       </div>
     </div>
     ${S.salEmpOpen ? `
-    <div class="tbl-wrap" style="margin-top:12px"><table>
-      <thead><tr><th>직원</th><th class="r">기본급</th>${MN.map(mn=>`<th class="r" style="min-width:54px">${mn}</th>`).join('')}<th></th></tr></thead>
+    <div style="display:flex;align-items:center;gap:8px;margin:10px 0 8px">
+      <button class="btn btn-ghost btn-sm" onclick="S.salBreakdown=!S.salBreakdown;render();event.stopPropagation()"
+        style="color:${S.salBreakdown?'var(--pur)':'var(--tx2)'};border-color:${S.salBreakdown?'rgba(155,109,250,0.4)':''}">
+        ${S.salBreakdown?'▲ 계산 내역 접기':'▼ 계산 내역 펼치기'}
+      </button>
+      <span style="font-size:10px;color:var(--tx3)">4대보험 · 퇴직금 · 합계 표시</span>
+    </div>
+    <div class="tbl-wrap"><table>
+      <thead><tr>
+        <th style="min-width:80px">직원</th>
+        <th class="r" style="min-width:70px">기본급</th>
+        ${MN.map(mn=>`<th class="r" style="min-width:68px">${mn}</th>`).join('')}
+        <th></th>
+      </tr></thead>
       <tbody>
-        ${S.employees.map(emp=>`<tr>
-          <td class="name" style="white-space:nowrap">${emp.name}<span style="font-size:10px;color:var(--tx3);margin-left:4px">${emp.rank}</span></td>
-          <td class="num" style="color:var(--tx3)">${fmt(emp.baseSalary)}</td>
-          ${Array.from({length:12},(_,m)=>{
-            const cf=isCfm(emp.id,m), s=getSal(emp.id,m);
-            return`<td class="num" style="color:${cf?'var(--grn)':'var(--tx3)'};font-size:11px">
-              ${cf ? fmt(s) : `<span style="font-size:10px;opacity:.6">${fmtM(emp.baseSalary)}</span>`}
-            </td>`;
-          }).join('')}
-          <td><button class="btn btn-ghost btn-sm" onclick="openSalOv('${emp.id}');event.stopPropagation()">편집</button></td>
-        </tr>`).join('')}
+        ${S.employees.map(emp=>{
+          const annSal = Array.from({length:12},(_,m)=>isCfm(emp.id,m)?getSal(emp.id,m):0).reduce((a,v)=>a+v,0);
+          const annIns = Array.from({length:12},(_,m)=>isCfm(emp.id,m)?calcInsurance(getSal(emp.id,m)):0).reduce((a,v)=>a+v,0);
+          const annRet = Array.from({length:12},(_,m)=>isCfm(emp.id,m)?calcRetirement(emp.id,getSal(emp.id,m),S.year,m):0).reduce((a,v)=>a+v,0);
+          return `
+          <tr style="border-top:2px solid var(--b2)">
+            <td class="name" style="white-space:nowrap">
+              ${emp.name}<br><span style="font-size:10px;color:var(--tx3)">${emp.rank||''}</span>
+            </td>
+            <td class="num" style="color:var(--tx3);font-size:11px">${fmt(emp.baseSalary)}</td>
+            ${Array.from({length:12},(_,m)=>{
+              const cf=isCfm(emp.id,m), s=getSal(emp.id,m);
+              return`<td class="num" style="color:${cf?'var(--grn)':'var(--tx3)'};font-size:11px;font-weight:${cf?600:400}">
+                ${cf ? fmt(s) : `<span style="opacity:.45">${fmtM(emp.baseSalary)}</span>`}
+              </td>`;
+            }).join('')}
+            <td style="vertical-align:middle"><button class="btn btn-ghost btn-sm" onclick="openSalOv('${emp.id}');event.stopPropagation()">편집</button></td>
+          </tr>
+          ${S.salBreakdown ? `
+          <tr style="background:rgba(79,142,247,0.03)">
+            <td style="font-size:10px;color:var(--tx3);padding-left:14px">4대보험</td>
+            <td class="num" style="font-size:10px;color:var(--tx3)">${annIns>0?fmtM(annIns):'-'}</td>
+            ${Array.from({length:12},(_,m)=>{
+              const cf=isCfm(emp.id,m);
+              const ins=cf?calcInsurance(getSal(emp.id,m)):null;
+              return`<td class="num" style="font-size:10px;color:${ins?'var(--acc)':'var(--tx3)'}">
+                ${ins!=null?fmtM(ins):'-'}
+              </td>`;
+            }).join('')}
+            <td></td>
+          </tr>
+          <tr style="background:rgba(155,109,250,0.03)">
+            <td style="font-size:10px;color:var(--tx3);padding-left:14px">퇴직금</td>
+            <td class="num" style="font-size:10px;color:var(--tx3)">${annRet>0?fmtM(annRet):'-'}</td>
+            ${Array.from({length:12},(_,m)=>{
+              const cf=isCfm(emp.id,m);
+              const ret=cf?calcRetirement(emp.id,getSal(emp.id,m),S.year,m):null;
+              return`<td class="num" style="font-size:10px;color:${ret?'var(--pur)':'var(--tx3)'}">
+                ${ret!=null&&ret>0?fmtM(ret):'<span style="opacity:.4">-</span>'}
+              </td>`;
+            }).join('')}
+            <td></td>
+          </tr>
+          <tr style="background:rgba(46,204,135,0.04);border-bottom:2px solid rgba(46,204,135,0.12)">
+            <td style="font-size:10px;font-weight:700;color:var(--grn);padding-left:14px">합계</td>
+            <td class="num" style="font-size:10px;font-weight:700;color:var(--grn)">${(annSal+annIns+annRet)>0?fmtM(annSal+annIns+annRet):'-'}</td>
+            ${Array.from({length:12},(_,m)=>{
+              const cf=isCfm(emp.id,m);
+              if(!cf)return`<td class="num" style="color:var(--tx3);font-size:10px">-</td>`;
+              const s=getSal(emp.id,m), ins=calcInsurance(s), ret=calcRetirement(emp.id,s,S.year,m);
+              const tot=s+ins+ret;
+              return`<td class="num" style="font-size:10px;font-weight:700;color:var(--grn)"
+                title="${fmt(s)} + ${fmt(ins)}(4보험) + ${fmt(ret)}(퇴직금)">
+                ${fmtM(tot)}
+              </td>`;
+            }).join('')}
+            <td></td>
+          </tr>` : ''}`;
+        }).join('')}
       </tbody>
     </table></div>` : `<div style="font-size:11px;color:var(--tx3);margin-top:8px">
       ${S.employees.map(e=>{
