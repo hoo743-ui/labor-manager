@@ -410,7 +410,8 @@ input[type=range]#pop-slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
   <div class="sidebar">
     <div style="padding:8px 10px 4px">
       <input id="sb-search" type="text" autocomplete="off" placeholder="직원 검색..."
-        oninput="sbSearch(this.value)"
+        oninput="if(!event.isComposing)sbSearch(this.value)"
+        oncompositionend="sbSearch(this.value)"
         style="width:100%;background:var(--sf2);border:1px solid var(--b);color:var(--tx);border-radius:6px;padding:5px 9px;font-size:11px;font-family:var(--sans);outline:none;transition:border-color .15s"
         onfocus="this.style.borderColor='var(--acc)'" onblur="this.style.borderColor='var(--b)'">
     </div>
@@ -420,7 +421,8 @@ input[type=range]#pop-slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
       <div class="sb-label" id="sb-proj-label">과제</div>
       <div style="padding:0 10px 6px">
         <input id="sb-proj-search" type="text" autocomplete="off" placeholder="과제 검색..."
-          oninput="sbProjSearch(this.value)"
+          oninput="if(!event.isComposing)sbProjSearch(this.value)"
+          oncompositionend="sbProjSearch(this.value)"
           style="width:100%;background:var(--sf2);border:1px solid var(--b);color:var(--tx);border-radius:6px;padding:5px 9px;font-size:11px;font-family:var(--sans);outline:none;transition:border-color .15s"
           onfocus="this.style.borderColor='var(--acc)'" onblur="this.style.borderColor='var(--b)'">
       </div>
