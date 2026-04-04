@@ -177,6 +177,12 @@ input[type=range]#pop-slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
 .pop-preset{padding:4px 10px;border-radius:5px;border:1px solid var(--b);background:none;color:var(--tx3);font-size:11px;font-family:var(--mono);cursor:pointer;transition:all .1s}
 .pop-preset:hover{border-color:var(--b2);color:var(--tx2);background:var(--sf2)}
 .pop-preset.active-pre{border-color:var(--acc);color:var(--acc);background:rgba(79,142,247,0.1)}
+.pop-apply-range{margin-bottom:14px}
+.pop-apply-range-label{font-size:10px;color:var(--tx3);font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
+.pop-range-btns{display:flex;gap:5px}
+.pop-range-btn{flex:1;padding:5px 0;border-radius:6px;border:1px solid var(--b);background:none;color:var(--tx3);font-size:11px;cursor:pointer;transition:all .12s;font-family:var(--sans)}
+.pop-range-btn:hover{border-color:var(--b2);color:var(--tx2)}
+.pop-range-btn.on{border-color:var(--acc);color:var(--acc);background:rgba(79,142,247,0.1);font-weight:500}
 .pop-status{display:flex;flex-direction:column;gap:7px;padding:12px;background:var(--sf2);border-radius:8px;border:1px solid var(--b)}
 .pop-stat-row{display:flex;justify-content:space-between;align-items:center;font-size:11px}
 .pop-stat-label{color:var(--tx3)}
@@ -465,6 +471,14 @@ input[type=range]#pop-slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
     <button class="pop-preset" onclick="popSetVal(50)">50%</button>
     <button class="pop-preset" onclick="popSetVal(100)">100%</button>
   </div>
+  <div class="pop-apply-range">
+    <div class="pop-apply-range-label">적용 범위</div>
+    <div class="pop-range-btns">
+      <button class="pop-range-btn on" id="pr-this" onclick="setApplyRange('this')">이 달만</button>
+      <button class="pop-range-btn" id="pr-rest" onclick="setApplyRange('rest')">이 달~연말</button>
+      <button class="pop-range-btn" id="pr-all" onclick="setApplyRange('all')">전체 월</button>
+    </div>
+  </div>
   <div class="pop-status">
     <div class="pop-stat-row">
       <span class="pop-stat-label">이달 집행 예정액</span>
@@ -723,7 +737,7 @@ input[type=range]#pop-slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
 <!-- JS 모듈 (순서 중요) -->
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.js"></script>
 <script>
 // ── CONFIG ──────────────────────────────────────
 const SUPA_URL = 'https://suunsnhegngvjuoguiie.supabase.co';
@@ -2598,7 +2612,7 @@ function rateCell(eid, pid, m) {
 }
 
 // ── POPOVER STATE & LOGIC ────────────────────────────
-const POP = { eid: null, pid: null, m: null, open: false };
+const POP = { eid: null, pid: null, m: null, open: false, applyRange: 'this' };
 
 function openPop(e, eid, pid, m) {
   e.stopPropagation();
@@ -2606,6 +2620,8 @@ function openPop(e, eid, pid, m) {
   if (POP.open && POP.eid === eid && POP.pid === pid && POP.m === m) { closePop(); return; }
 
   POP.eid = eid; POP.pid = pid; POP.m = m; POP.open = true;
+  POP.applyRange = 'this';
+  document.querySelectorAll('.pop-range-btn').forEach(b => b.classList.toggle('on', b.id === 'pr-this'));
 
   const proj = S.projects.find(p => p.id === pid);
   const emp  = S.employees.find(e => e.id === eid);
@@ -2668,10 +2684,22 @@ function popSlide(val, commit = true) {
   // 미리 반영해서 계산 (실제 저장은 commit 시)
   const oldRate = getRate(POP.eid, POP.pid, POP.m);
   if (commit) {
+    const applyMonths = POP.applyRange === 'all'
+      ? Array.from({length:12}, (_,i) => i)
+      : POP.applyRange === 'rest'
+        ? Array.from({length: 12 - POP.m}, (_,i) => POP.m + i)
+        : [POP.m];
     if (!yPart()[POP.eid]) yPart()[POP.eid] = {};
     if (!yPart()[POP.eid][POP.pid])
       yPart()[POP.eid][POP.pid] = Array.from({length:12}, () => ({rate:0, role:'공동'}));
-    yPart()[POP.eid][POP.pid][POP.m].rate = val;
+    applyMonths.forEach(mo => {
+      if (!isLocked(POP.eid, mo)) yPart()[POP.eid][POP.pid][mo].rate = val;
+    });
+    if (applyMonths.length === 1) {
+      saveRateToDB(POP.eid, POP.pid, POP.m);
+    } else {
+      saveMultiRateToDB(POP.eid, POP.pid, applyMonths);
+    }
   }
 
   const execAmt = Math.round(sal * val / 100);
@@ -2756,7 +2784,12 @@ function popSlide(val, commit = true) {
 
   // commit이면 셀 + 히트맵 + 3책5공 뱃지 + 사이드바 즉시 업데이트
   if (commit) {
-    refreshCell(POP.eid, POP.pid, POP.m);
+    const applyMonths2 = POP.applyRange === 'all'
+      ? Array.from({length:12}, (_,i) => i)
+      : POP.applyRange === 'rest'
+        ? Array.from({length: 12 - POP.m}, (_,i) => POP.m + i)
+        : [POP.m];
+    applyMonths2.forEach(mo => refreshCell(POP.eid, POP.pid, mo));
     refreshSummaryRow(POP.eid, POP.pid);
     refresh345Badge(POP.eid);
     refreshHeatmapRow(POP.eid);
@@ -2767,6 +2800,11 @@ function popSlide(val, commit = true) {
 function popSetVal(v) {
   document.getElementById('pop-slider').value = v;
   popSlide(v, true);
+}
+
+function setApplyRange(range) {
+  POP.applyRange = range;
+  document.querySelectorAll('.pop-range-btn').forEach(b => b.classList.toggle('on', b.id === `pr-${range}`));
 }
 
 function popSetRole(role) {
@@ -2784,7 +2822,9 @@ function popSetRole(role) {
     b.className = 'pop-role' + (b.dataset.role === role ? ` sel-${role}` : '');
   });
   refresh345Badge(POP.eid);
-  popSlide(getRate(POP.eid, POP.pid, POP.m), true);
+  // 역할 변경은 전체 월 저장 (역할이 all-month 적용됐을 수 있으므로)
+  saveMultiRateToDB(POP.eid, POP.pid, Array.from({length:12}, (_,i)=>i));
+  popSlide(getRate(POP.eid, POP.pid, POP.m), false);
 }
 
 function refreshHeatmapRow(eid) {
@@ -4039,6 +4079,25 @@ function saveRateToDB(eid, pid, m) {
       toast(`⚠ 저장 실패: ${e.message}`, 3000);
     }
   }, 800);
+}
+
+// 여러 월 참여율 일괄 저장
+async function saveMultiRateToDB(eid, pid, months) {
+  const rows = months
+    .map(m => {
+      const d = yPart()[eid]?.[pid]?.[m];
+      return d ? { emp_id: eid, proj_id: pid, month: m, rate: d.rate, role: d.role, year: S.year } : null;
+    })
+    .filter(Boolean);
+  if (!rows.length) return;
+  try {
+    await db.from('participation').upsert(rows, { onConflict: 'emp_id,proj_id,month,year' });
+    setDbStatus('saved');
+    setTimeout(() => setDbStatus('ok'), 2000);
+  } catch(e) {
+    setDbStatus('error');
+    toast(`⚠ 저장 실패: ${e.message}`, 3000);
+  }
 }
 
 async function deleteEmpFromDB(eid) {
