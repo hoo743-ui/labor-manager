@@ -23,15 +23,22 @@ html{font-size:13px}
 body{font-family:var(--sans);background:var(--bg);color:var(--tx);height:100vh;display:flex;flex-direction:column;overflow:hidden}
 
 /* ── TOPBAR ── */
-.topbar{display:flex;align-items:center;gap:12px;padding:10px 20px;background:var(--sf);border-bottom:1px solid var(--b);flex-shrink:0}
-.logo{font-size:15px;font-weight:700;letter-spacing:-.5px;white-space:nowrap;display:flex;align-items:center;gap:8px}
+.topbar{display:flex;align-items:center;gap:8px;padding:7px 16px;background:var(--sf);border-bottom:1px solid var(--b);flex-shrink:0}
+.logo{font-size:15px;font-weight:700;letter-spacing:-.5px;white-space:nowrap;display:flex;align-items:center;gap:8px;flex-shrink:0}
 .logo-badge{background:var(--acc);color:#fff;font-size:10px;font-weight:700;padding:3px 7px;border-radius:4px;letter-spacing:.05em}
 .logo-text{color:var(--tx);font-weight:500;font-size:13px;letter-spacing:-.2px}
-.nav{display:flex;gap:2px;flex:1;justify-content:center}
-.nav-btn{padding:6px 14px;border-radius:6px;border:none;background:none;color:var(--tx2);font-family:var(--sans);font-size:12px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.nav{display:flex;gap:1px;flex:1;justify-content:center;flex-wrap:nowrap;overflow:hidden}
+.nav-btn{padding:5px 11px;border-radius:6px;border:none;background:none;color:var(--tx2);font-family:var(--sans);font-size:11.5px;cursor:pointer;transition:all .15s;white-space:nowrap}
 .nav-btn:hover{color:var(--tx);background:var(--sf2)}
 .nav-btn.on{color:var(--acc);background:rgba(79,142,247,0.13);font-weight:500}
-.top-actions{display:flex;gap:6px;flex-shrink:0;align-items:center}
+.top-actions{display:flex;gap:4px;flex-shrink:0;align-items:center}
+/* ── 드롭다운 ── */
+.dd-wrap{position:relative}
+.dd-menu{display:none;position:absolute;right:0;top:calc(100% + 5px);background:var(--sf);border:1px solid var(--b2);border-radius:9px;padding:4px;min-width:152px;z-index:300;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+.dd-menu.open{display:block;animation:popIn .12s ease}
+.dd-item{display:flex;align-items:center;gap:8px;padding:7px 11px;border-radius:5px;font-size:12px;color:var(--tx2);cursor:pointer;white-space:nowrap;border:none;background:none;width:100%;text-align:left;font-family:var(--sans)}
+.dd-item:hover{background:var(--sf2);color:var(--tx)}
+.dd-sep{height:1px;background:var(--b);margin:3px 6px}
 .btn{padding:5px 12px;border-radius:6px;border:none;font-family:var(--sans);font-size:12px;cursor:pointer;transition:all .15s;white-space:nowrap}
 .btn-ghost{background:var(--sf2);color:var(--tx2);border:1px solid var(--b2)}.btn-ghost:hover{color:var(--tx)}
 .btn-pri{background:var(--acc);color:#fff}.btn-pri:hover{background:var(--acc2)}
@@ -394,36 +401,43 @@ input[type=range]#pop-slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
   </div>
   <nav class="nav">
     <button class="nav-btn on" onclick="nav('dash')">대시보드</button>
-    <button class="nav-btn"    onclick="nav('proj')">과제별 현황</button>
-    <button class="nav-btn"    onclick="nav('emp')">직원별 참여율</button>
-    <button class="nav-btn"    onclick="nav('salary')" id="nav-salary">급여 · 잔액</button>
-    <button class="nav-btn"    onclick="nav('master')" id="nav-master">기준 데이터</button>
-    <button class="nav-btn"    onclick="nav('history')" id="nav-history">변경 이력</button>
-    <button class="nav-btn"    onclick="nav('pivot')"  id="nav-pivot" style="color:var(--pur)">전체 피벗</button>
-    <button class="nav-btn"    onclick="nav('tips')"   id="nav-tips" style="color:var(--amb)">사용 가이드</button>
-    <button class="nav-btn"    onclick="nav('admin')"  id="nav-admin" style="color:var(--red);display:none">관리자</button>
+    <button class="nav-btn"   onclick="nav('proj')">과제별 현황</button>
+    <button class="nav-btn"   onclick="nav('emp')">직원별 참여율</button>
+    <button class="nav-btn"   onclick="nav('salary')" id="nav-salary">급여 · 잔액</button>
+    <button class="nav-btn"   onclick="nav('master')" id="nav-master">기준 데이터</button>
+    <button class="nav-btn"   onclick="nav('pivot')"  id="nav-pivot" style="color:var(--pur)">전체 피벗</button>
+    <button class="nav-btn"   onclick="nav('tips')"   id="nav-tips"  style="color:var(--amb)">가이드</button>
+    <button class="nav-btn"   onclick="nav('admin')"  id="nav-admin" style="color:var(--red);display:none">관리자</button>
   </nav>
   <div class="top-actions">
     <!-- 연도 전환 -->
-    <div style="display:flex;align-items:center;gap:4px;border:1px solid var(--b2);border-radius:6px;padding:2px 6px;background:var(--sf2)">
+    <div style="display:flex;align-items:center;gap:3px;border:1px solid var(--b2);border-radius:6px;padding:2px 5px;background:var(--sf2);flex-shrink:0">
       <button onclick="changeYear(-1)" style="background:none;border:none;color:var(--tx2);cursor:pointer;font-size:14px;padding:0 2px;line-height:1">‹</button>
-      <span id="year-label" style="font-size:12px;font-family:var(--mono);color:var(--tx);min-width:36px;text-align:center">2025</span>
+      <span id="year-label" style="font-size:12px;font-family:var(--mono);color:var(--tx);min-width:34px;text-align:center">2025</span>
       <button onclick="changeYear(1)"  style="background:none;border:none;color:var(--tx2);cursor:pointer;font-size:14px;padding:0 2px;line-height:1">›</button>
     </div>
-    <span id="db-status" style="font-size:11px;font-family:var(--mono);color:var(--tx3);white-space:nowrap">🔄 연결 중...</span>
-    <button id="btn-soft-refresh" class="btn btn-ghost" style="font-size:11px" onclick="softRefresh()">🔄 새로고침</button>
-    <button class="btn btn-ghost ro-hide" style="font-size:11px" onclick="saveToDB()">💾 저장</button>
-    <button class="btn btn-ghost" style="font-size:11px" onclick="printPDF()">🖨 출력</button>
-    <button class="btn btn-ghost" style="color:var(--grn)" onclick="downloadTemplate()" title="전체 데이터 입력용 엑셀 양식 다운로드">📥 양식</button>
-    <button class="btn btn-ghost" onclick="document.getElementById('xu').click()">↑ 불러오기</button>
-    <input type="file" id="xu" accept=".xlsx,.xls" style="display:none" onchange="importXL(this)">
-    <button class="btn btn-ghost" style="color:var(--pur)" onclick="document.getElementById('xuv').click()" title="세로형(과제ID·직원ID·월·참여율) 엑셀 가져오기">↑ 세로형</button>
+    <span id="db-status" style="font-size:10px;font-family:var(--mono);color:var(--tx3);white-space:nowrap">🔄</span>
+    <button id="btn-soft-refresh" class="btn btn-ghost" style="font-size:11px;padding:4px 8px" onclick="softRefresh()" title="새로고침">🔄</button>
+    <button class="btn btn-ghost ro-hide" style="font-size:11px;padding:4px 8px" onclick="saveToDB()" title="저장">💾</button>
+    <!-- 파일 드롭다운 -->
+    <div class="dd-wrap">
+      <button class="btn btn-ghost" style="font-size:11px;padding:4px 9px" onclick="toggleDd('file-dd')">📂 파일 ▾</button>
+      <div class="dd-menu" id="file-dd">
+        <button class="dd-item" onclick="downloadTemplate();closeDd()">📥 입력 양식 다운로드</button>
+        <div class="dd-sep"></div>
+        <button class="dd-item ro-hide" onclick="document.getElementById('xu').click();closeDd()">↑ 불러오기 (가로형)</button>
+        <button class="dd-item ro-hide" onclick="document.getElementById('xuv').click();closeDd()" style="color:var(--pur)">↑ 불러오기 (세로형)</button>
+        <div class="dd-sep"></div>
+        <button class="dd-item" onclick="exportXL();closeDd()">↓ 내보내기 (엑셀)</button>
+        <button class="dd-item" onclick="printPDF();closeDd()">🖨 출력 / PDF</button>
+      </div>
+    </div>
+    <input type="file" id="xu"  accept=".xlsx,.xls" style="display:none" onchange="importXL(this)">
     <input type="file" id="xuv" accept=".xlsx,.xls" style="display:none" onchange="importXLVert(this)">
-    <button class="btn btn-pri" onclick="exportXL()">↓ 내보내기</button>
     <!-- 사용자 칩 -->
     <div class="user-chip" id="user-chip" style="display:none">
       <div class="user-avatar" id="user-avatar">?</div>
-      <span id="user-email-label" style="font-size:11px;color:var(--tx2);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+      <span id="user-email-label" style="font-size:11px;color:var(--tx2);max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
       <button onclick="signOut()" style="background:none;border:none;color:var(--tx3);cursor:pointer;font-size:11px;padding:0 2px" title="로그아웃">×</button>
     </div>
   </div>
@@ -2124,6 +2138,19 @@ function renderMaster(){
 
 // ── ACTIONS ────────────────────────────────────
 
+function toggleDd(id) {
+  const el = document.getElementById(id);
+  const isOpen = el.classList.contains('open');
+  document.querySelectorAll('.dd-menu.open').forEach(m => m.classList.remove('open'));
+  if (!isOpen) el.classList.add('open');
+}
+function closeDd() {
+  document.querySelectorAll('.dd-menu.open').forEach(m => m.classList.remove('open'));
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('.dd-wrap')) closeDd();
+});
+
 function nav(v) {
   if (S.isReadOnly && !RO_ALLOWED_VIEWS.includes(v)) return;
   S.view = v;
@@ -2131,7 +2158,7 @@ function nav(v) {
   if (v === 'proj' && !S.selProj) S.selProj = S.projects[0]?.id;
   if (v === 'emp'  && !S.selEmp)  S.selEmp  = S.employees[0]?.id;
   document.querySelectorAll('.nav-btn').forEach((b, i) =>
-    b.classList.toggle('on', ['dash','proj','emp','salary','master','history','pivot','tips','admin'][i] === v)
+    b.classList.toggle('on', ['dash','proj','emp','salary','master','pivot','tips','admin'][i] === v)
   );
   render();
 }
@@ -4485,7 +4512,7 @@ function updateNavVisibility() {
   const adminBtn = document.getElementById('nav-admin');
   if (adminBtn) adminBtn.style.display = S.isAdmin ? '' : 'none';
 
-  const roNavIds = ['nav-salary', 'nav-master', 'nav-history', 'nav-pivot', 'nav-tips'];
+  const roNavIds = ['nav-salary', 'nav-master', 'nav-pivot', 'nav-tips'];
   roNavIds.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = S.isReadOnly ? 'none' : '';
