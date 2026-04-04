@@ -15,6 +15,7 @@
   --amb:#f0a030;--amb2:rgba(240,160,48,0.12);
   --red:#f04060;--red2:rgba(240,64,96,0.1);
   --pur:#9b6dfa;
+  --sky:#29b6f6;--sky2:rgba(41,182,246,0.12);
   --mono:'DM Mono',monospace;--sans:'Noto Sans KR',sans-serif;
   --r:8px;--rl:14px;
 }
@@ -121,9 +122,10 @@ td.ctr{text-align:center}
 .rate-cell{display:inline-flex;align-items:center;justify-content:flex-end;width:58px;height:28px;padding:0 7px;border-radius:5px;border:1px solid transparent;font-family:var(--mono);font-size:12px;color:var(--tx2);cursor:pointer;transition:all .12s;user-select:none;position:relative}
 .rate-cell:hover{border-color:var(--b2);background:var(--sf2);color:var(--tx)}
 .rate-cell.active{border-color:var(--acc);background:rgba(79,142,247,0.12);color:var(--acc)}
-.rate-cell.rc-over{color:var(--red);border-color:rgba(240,64,96,0.35);background:rgba(240,64,96,0.07)}
-.rate-cell.rc-low{color:var(--amb);border-color:rgba(240,160,48,0.3);background:rgba(240,160,48,0.06)}
-.rate-cell.rc-ok{color:var(--grn)}
+.rate-cell.r-zero{color:var(--red);border-color:rgba(240,64,96,0.35);background:rgba(240,64,96,0.07)}
+.rate-cell.r-lo{color:var(--amb);border-color:rgba(240,160,48,0.3);background:rgba(240,160,48,0.06)}
+.rate-cell.r-mid{color:var(--sky);border-color:rgba(41,182,246,0.3);background:rgba(41,182,246,0.07)}
+.rate-cell.r-hi{color:var(--grn);border-color:rgba(46,204,135,0.3);background:rgba(46,204,135,0.07)}
 .rate-cell-dot{width:5px;height:5px;border-radius:50%;margin-right:4px;flex-shrink:0}
 
 /* ── SUM CLASSES ── */
@@ -188,10 +190,10 @@ input[type=range]#pop-slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
 .pj-rc{display:inline-flex;align-items:center;justify-content:flex-end;width:62px;height:28px;padding:0 8px;border-radius:5px;border:1px solid transparent;font-family:var(--mono);font-size:12px;cursor:pointer;transition:all .1s;user-select:none;position:relative}
 .pj-rc:hover{border-color:var(--b2);background:var(--sf2)}
 .pj-rc:hover::after{content:'✎';position:absolute;right:3px;top:50%;transform:translateY(-50%);font-size:9px;color:var(--tx3);font-family:var(--sans)}
-.pj-rc.pj-ok{color:var(--grn);border-color:rgba(46,204,135,0.25);background:rgba(46,204,135,0.05)}
-.pj-rc.pj-low{color:var(--amb);border-color:rgba(240,160,48,0.3);background:rgba(240,160,48,0.05)}
-.pj-rc.pj-over{color:var(--red);border-color:rgba(240,64,96,0.3);background:rgba(240,64,96,0.07)}
-.pj-rc.pj-zero{color:var(--tx3)}
+.pj-rc.r-zero{color:var(--red);border-color:rgba(240,64,96,0.35);background:rgba(240,64,96,0.07)}
+.pj-rc.r-lo{color:var(--amb);border-color:rgba(240,160,48,0.3);background:rgba(240,160,48,0.06)}
+.pj-rc.r-mid{color:var(--sky);border-color:rgba(41,182,246,0.3);background:rgba(41,182,246,0.07)}
+.pj-rc.r-hi{color:var(--grn);border-color:rgba(46,204,135,0.3);background:rgba(46,204,135,0.07)}
 .pj-inp{width:62px;height:28px;padding:0 6px;border-radius:5px;border:2px solid var(--acc);background:rgba(79,142,247,0.1);color:var(--acc);font-family:var(--mono);font-size:12px;text-align:right;outline:none;-moz-appearance:textfield;appearance:textfield;box-shadow:0 0 0 3px rgba(79,142,247,0.15)}
 .pj-inp::-webkit-outer-spin-button,.pj-inp::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 /* 하위 호환용 (setRateInline 에서 사용) */
@@ -278,8 +280,10 @@ input[type=range]#pop-slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
 .bulk-input{background:var(--sf2);border:1px solid var(--b);color:var(--tx3);border-radius:6px;padding:5px 6px;font-size:12px;font-family:var(--mono);outline:none;width:100%;text-align:center;-moz-appearance:textfield;appearance:textfield;transition:border-color .1s,color .1s,background .1s}
 .bulk-input::-webkit-outer-spin-button,.bulk-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 .bulk-input:focus{border-color:var(--acc);background:rgba(79,142,247,0.08);color:var(--acc)}
-.bulk-input.bi-ok{border-color:rgba(46,204,135,0.3);background:rgba(46,204,135,0.05);color:var(--grn)}
-.bulk-input.bi-zero{color:var(--tx3);border-color:var(--b)}
+.bulk-input.r-zero{border-color:rgba(240,64,96,0.35);background:rgba(240,64,96,0.07);color:var(--red)}
+.bulk-input.r-lo{border-color:rgba(240,160,48,0.3);background:rgba(240,160,48,0.05);color:var(--amb)}
+.bulk-input.r-mid{border-color:rgba(41,182,246,0.3);background:rgba(41,182,246,0.06);color:var(--sky)}
+.bulk-input.r-hi{border-color:rgba(46,204,135,0.3);background:rgba(46,204,135,0.05);color:var(--grn)}
 .bulk-emp-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--b)}
 .bulk-emp-block{margin-bottom:20px;padding:12px;background:var(--sf2);border-radius:8px;border:1px solid var(--b)}
 
@@ -889,6 +893,21 @@ function addHistory(action, detail) {
 }
 
 // ── COMPUTED ────────────────────────────────────
+// 참여율 → CSS 클래스 (0%=빨강 / 1~49%=주황 / 50~99%=하늘 / 100%=초록)
+function rRateCls(rate) {
+  if (!rate || rate <= 0) return 'r-zero';
+  if (rate < 50)  return 'r-lo';
+  if (rate < 100) return 'r-mid';
+  return 'r-hi';
+}
+// 참여율 → CSS 색상 변수
+function rRateCol(rate) {
+  if (!rate || rate <= 0) return 'var(--red)';
+  if (rate < 50)  return 'var(--amb)';
+  if (rate < 100) return 'var(--sky)';
+  return 'var(--grn)';
+}
+
 function yPart() {
   if (!S.participation[S.year]) S.participation[S.year] = {};
   return S.participation[S.year];
@@ -1563,8 +1582,8 @@ function renderPivotChart() {
                 </div>
               </td>
               ${eff12.map((e, mi) => {
-                const bg = e > 100 ? 'var(--red)' : e > 90 ? 'var(--amb)' : e > 0 ? 'var(--grn)' : 'rgba(255,255,255,0.06)';
-                const opacity = e > 0 ? Math.max(0.25, Math.min(1, e / 100)) : 1;
+                const bg = e <= 0 ? 'rgba(255,255,255,0.06)' : rRateCol(e);
+                const opacity = e > 0 ? Math.max(0.3, Math.min(1, e / 100)) : 1;
                 const textCol = e > 0 ? '#fff' : 'var(--tx3)';
                 return `<td style="padding:3px 2px;text-align:center">
                   <div id="hm-cell-${emp.id}-${mi}" class="hm-cell" title="${emp.name} ${MN[mi]}: ${e > 0 ? e+'%' : '미입력'}"
@@ -1653,8 +1672,8 @@ function renderEmpPivot(){
                   const low=rate>0&&rate<(proj2?.minRate||10);
                   const over=eff>100&&role!=='cosd';
                   const locked=isLocked(emp.id,m);
-                  const bg=over?'rgba(240,64,96,0.12)':low?'rgba(240,160,48,0.1)':rate>0?'rgba(46,204,135,0.07)':'';
-                  const col=over?'var(--red)':low?'var(--amb)':rate>0?'var(--grn)':'var(--tx3)';
+                  const col=rRateCol(rate);
+                  const bg=rate===0?'rgba(240,64,96,0.07)':rate<50?'rgba(240,160,48,0.07)':rate<100?'rgba(41,182,246,0.07)':'rgba(46,204,135,0.07)';
                   return`<td style="text-align:center;padding:2px;background:${bg};${m===0?'border-left:2px solid var(--b2)':''}">
                     ${locked
                       ?`<div style="font-size:11px;font-family:var(--mono);color:var(--tx3);padding:3px">🔒${rate>0?rate:'—'}</div>`
@@ -2742,18 +2761,15 @@ function rateCell(eid, pid, m) {
   const low  = rate > 0 && proj && rate < proj.minRate;
   const over = eff > 100 && role !== 'cosd';
 
-  let cls = '';
-  let dot = 'background:var(--tx3)';
-  if (over)      { cls = 'rc-over'; dot = 'background:var(--red)'; }
-  else if (low)  { cls = 'rc-low';  dot = 'background:var(--amb)'; }
-  else if (rate > 0) { cls = 'rc-ok'; dot = 'background:var(--grn)'; }
-
+  const cls = rRateCls(rate);
+  const dot = `background:${rRateCol(rate)}`;
   const label = rate > 0 ? rate + '%' : '—';
+  const warn = over ? ' ⚠유효참여율 초과' : low ? ` ⚠최소${proj?.minRate}% 미달` : '';
 
   return `<span class="rate-cell ${cls}"
     onclick="openPop(event,'${eid}','${pid}',${m})"
     id="rc-${eid}-${pid}-${m}"
-    title="${over ? '유효참여율 100% 초과' : low ? `최소 ${proj?.minRate}% 미달` : role || '미입력'}">
+    title="${rate}%${warn}">
     <span class="rate-cell-dot" style="${dot}"></span>${label}
   </span>`;
 }
@@ -2993,8 +3009,8 @@ function refreshHeatmapRow(eid) {
   eff12.forEach((e, mi) => {
     const el = document.getElementById(`hm-cell-${eid}-${mi}`);
     if (!el) return;
-    const bg = e > 100 ? 'var(--red)' : e > 90 ? 'var(--amb)' : e > 0 ? 'var(--grn)' : 'rgba(255,255,255,0.06)';
-    const opacity = e > 0 ? Math.max(0.25, Math.min(1, e / 100)) : 1;
+    const bg = e <= 0 ? 'rgba(255,255,255,0.06)' : rRateCol(e);
+    const opacity = e > 0 ? Math.max(0.3, Math.min(1, e / 100)) : 1;
     el.style.background = bg;
     el.style.opacity = e > 0 ? opacity : 1;
     el.style.color = e > 0 ? '#fff' : 'var(--tx3)';
@@ -3774,7 +3790,7 @@ function openBulkModal(pid) {
         ${MN.map((mn, m) => {
           const locked = isLocked(emp.id, m);
           const rate = months[m]?.rate || 0;
-          const cls = locked ? '' : rate > 0 ? 'bi-ok' : 'bi-zero';
+          const cls = locked ? '' : rRateCls(rate);
           return `<div class="bulk-item">
             <div class="bulk-label">${mn}${locked ? ' 🔒' : ''}</div>
             <input class="bulk-input ${cls}" id="bulk-${emp.id}-${m}" type="number" min="0" max="100"
@@ -3808,8 +3824,8 @@ function bulkFillRow(eid) {
 
 function updateBulkCell(inp, _) {
   const v = parseInt(inp.value) || 0;
-  inp.classList.remove('bi-ok', 'bi-zero');
-  inp.classList.add(v > 0 ? 'bi-ok' : 'bi-zero');
+  inp.classList.remove('r-zero','r-lo','r-mid','r-hi');
+  inp.classList.add(rRateCls(v));
 }
 
 async function saveBulk() {
@@ -4258,8 +4274,9 @@ function projRateCell(eid, pid, m) {
   const eff  = effRate(eid, m);
   const role = getRole(eid, pid, m);
   const over = eff > 100 && role !== 'cosd';
-  const cls  = over ? 'pj-over' : low ? 'pj-low' : rate > 0 ? 'pj-ok' : 'pj-zero';
-  const tip  = over ? '유효참여율 100% 초과' : low ? `최소 ${proj?.minRate}% 미달` : rate > 0 ? `${rate}% 참여` : '클릭하여 입력';
+  const cls  = rRateCls(rate);
+  const warn = over ? ' ⚠유효참여율 초과' : low ? ` ⚠최소${proj?.minRate}% 미달` : '';
+  const tip  = rate > 0 ? `${rate}%${warn}` : '클릭하여 입력';
   const label = rate > 0 ? rate + '%' : '—';
   return `<span class="pj-rc ${cls}" id="prc-${eid}-${pid}-${m}"
     onclick="pjEditStart('${eid}','${pid}',${m})" title="${tip}">${label}</span>`;
