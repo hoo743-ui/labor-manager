@@ -177,6 +177,14 @@ input[type=range]#pop-slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
 .pop-preset{padding:4px 10px;border-radius:5px;border:1px solid var(--b);background:none;color:var(--tx3);font-size:11px;font-family:var(--mono);cursor:pointer;transition:all .1s}
 .pop-preset:hover{border-color:var(--b2);color:var(--tx2);background:var(--sf2)}
 .pop-preset.active-pre{border-color:var(--acc);color:var(--acc);background:rgba(79,142,247,0.1)}
+/* ── 과제별현황 인라인 참여율 입력 ── */
+.rate-inp{width:58px;height:28px;padding:0 6px;border-radius:5px;border:1px solid var(--b);background:rgba(255,255,255,0.03);color:var(--tx3);font-family:var(--mono);font-size:12px;text-align:right;outline:none;-moz-appearance:textfield;appearance:textfield;transition:border-color .12s,background .12s,color .12s}
+.rate-inp::-webkit-outer-spin-button,.rate-inp::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.rate-inp:hover{border-color:var(--b2)}
+.rate-inp:focus{border-color:var(--acc)!important;background:rgba(79,142,247,0.08)!important;color:var(--acc)!important}
+.rate-inp.ri-ok{border-color:rgba(46,204,135,0.35);background:rgba(46,204,135,0.05);color:var(--grn)}
+.rate-inp.ri-low{border-color:rgba(240,160,48,0.3);background:rgba(240,160,48,0.05);color:var(--amb)}
+.rate-inp.ri-over{border-color:rgba(240,64,96,0.3);background:rgba(240,64,96,0.07);color:var(--red)}
 .pop-apply-range{margin-bottom:14px}
 .pop-apply-range-label{font-size:10px;color:var(--tx3);font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
 .pop-range-btns{display:flex;gap:5px}
@@ -397,6 +405,7 @@ input[type=range]#pop-slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
     <button id="btn-soft-refresh" class="btn btn-ghost" style="font-size:11px" onclick="softRefresh()">🔄 새로고침</button>
     <button class="btn btn-ghost ro-hide" style="font-size:11px" onclick="saveToDB()">💾 저장</button>
     <button class="btn btn-ghost" style="font-size:11px" onclick="printPDF()">🖨 출력</button>
+    <button class="btn btn-ghost" style="color:var(--grn)" onclick="downloadTemplate()" title="전체 데이터 입력용 엑셀 양식 다운로드">📥 양식</button>
     <button class="btn btn-ghost" onclick="document.getElementById('xu').click()">↑ 불러오기</button>
     <input type="file" id="xu" accept=".xlsx,.xls" style="display:none" onchange="importXL(this)">
     <button class="btn btn-ghost" style="color:var(--pur)" onclick="document.getElementById('xuv').click()" title="세로형(과제ID·직원ID·월·참여율) 엑셀 가져오기">↑ 세로형</button>
@@ -1182,7 +1191,8 @@ function renderProj(){
           type="text"
           placeholder="과제명 검색..."
           value="${S.projSearch.replace(/"/g,'&quot;')}"
-          oninput="S.projSearch=this.value;render();document.getElementById('proj-search-input')?.focus()"
+          oninput="if(!event.isComposing){S.projSearch=this.value;render();document.getElementById('proj-search-input')?.focus()}"
+          oncompositionend="S.projSearch=this.value;render();setTimeout(()=>{const el=document.getElementById('proj-search-input');if(el){const l=el.value.length;el.focus();el.setSelectionRange(l,l)}},0)"
           style="width:100%;padding:5px 8px 5px 28px;background:var(--sf2);border:1px solid var(--b2);border-radius:6px;color:var(--tx);font-size:12px;font-family:var(--sans);outline:none"
           onfocus="this.style.borderColor='var(--acc)'" onblur="this.style.borderColor='var(--b2)'"
         >
@@ -1297,7 +1307,7 @@ function renderProj(){
 
   <div class="card">
     <div style="font-size:13px;font-weight:600;margin-bottom:4px">참여율 입력 — ${proj.name}</div>
-    <div style="font-size:11px;color:var(--tx3);margin-bottom:8px">셀 클릭 → 슬라이더 · 🔒=잠금 · ⟳=전체월 복사</div>
+    <div style="font-size:11px;color:var(--tx3);margin-bottom:8px">숫자 직접 입력 후 Enter · 0 입력 시 미참여 · 🔒=잠금 · ⟳=전체월 복사</div>
     <div style="margin-bottom:10px;display:flex;gap:6px;flex-wrap:wrap">
       <button class="btn btn-ghost btn-sm ro-hide" onclick="openAssignModal('${pid}')">+ 직원 배정</button>
       <button class="btn btn-ghost btn-sm ro-hide" onclick="lockAllConfirmed()">🔒 확정월 일괄 잠금</button>
@@ -1315,10 +1325,22 @@ function renderProj(){
             <td><span class="tag t-${role}">${role==='cosd'?'RMS':role}</span></td>
             ${months.map((mv,m)=>{
               const locked=isLocked(emp.id,m);
+              const rate=mv.rate||0;
+              const proj2=S.projects.find(p=>p.id===pid);
+              const low=rate>0&&proj2&&rate<proj2.minRate;
+              const eff2=effRate(emp.id,m);
+              const role2=mv.role||'공동';
+              const over=eff2>100&&role2!=='cosd';
+              const riCls=over?'ri-over':low?'ri-low':rate>0?'ri-ok':'';
               return `<td style="padding:4px 4px;position:relative">
                 ${locked
-                  ? `<span style="display:inline-flex;align-items:center;justify-content:flex-end;width:58px;height:28px;padding:0 7px;border-radius:5px;background:rgba(255,255,255,0.04);border:1px solid var(--b);color:var(--tx3);font-family:var(--mono);font-size:12px">${mv.rate}%</span>`
-                  : rateCell(emp.id,pid,m)
+                  ? `<span style="display:inline-flex;align-items:center;justify-content:flex-end;width:58px;height:28px;padding:0 7px;border-radius:5px;background:rgba(255,255,255,0.04);border:1px solid var(--b);color:var(--tx3);font-family:var(--mono);font-size:12px">${rate}%</span>`
+                  : `<input type="number" min="0" max="100" value="${rate}"
+                      id="ri-${emp.id}-${pid}-${m}"
+                      class="rate-inp ${riCls}"
+                      onchange="setRateInline('${emp.id}','${pid}',${m},this.value)"
+                      onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"
+                    >`
                 }
                 <button onclick="toggleLock('${emp.id}',${m})" class="ro-hide" style="position:absolute;top:2px;right:2px;background:none;border:none;cursor:pointer;font-size:9px;color:${locked?'var(--amb)':'var(--tx3)'};opacity:${locked?1:0.4}" title="${locked?'잠금 해제':'잠금'}">${locked?'🔒':'🔓'}</button>
               </td>`;
@@ -1327,8 +1349,8 @@ function renderProj(){
             <td><button class="btn btn-ghost btn-sm ro-hide" onclick="copyRowToAll('${emp.id}','${pid}')" title="${MN[S.selMonth]} 값을 전체 월에 복사">⟳</button></td>
           </tr>`;
         }).join('')}
-        <tr style="background:var(--sf2)" id="sum-proj-${pid}"><td colspan="2" style="color:var(--tx3);font-size:11px">월 집행예정</td>
-          ${Array.from({length:12},(_,m)=>{const tot=participants.reduce((s,e)=>s+mExec(e.id,pid,m),0);return`<td class="num" style="color:var(--tx2)">${tot>0?fmt(tot):'-'}</td>`;}).join('')}<td></td><td></td></tr>
+        <tr style="background:var(--sf2)"><td colspan="2" style="color:var(--tx3);font-size:11px">월 집행예정</td>
+          ${Array.from({length:12},(_,m)=>{const tot=participants.reduce((s,e)=>s+mExec(e.id,pid,m),0);return`<td id="psum-${pid}-${m}" class="num" style="color:var(--tx2)">${tot>0?fmt(tot):'-'}</td>`;}).join('')}<td></td><td></td></tr>
         ${participants.some(emp=>Array.from({length:12},(_,m)=>mMaxExec(emp.id,pid,m)).some(v=>v!==null)) ? `
         <tr style="background:rgba(155,109,250,0.06);border-top:2px solid rgba(155,109,250,0.25)">
           <td colspan="14" style="padding:5px 10px;font-size:10px;font-weight:700;color:var(--pur);letter-spacing:.04em">
@@ -2311,15 +2333,17 @@ function parseXL(wb) {
   if (wb.SheetNames.includes('직원마스터')) {
     const rows = XLSX.utils.sheet_to_json(wb.Sheets['직원마스터'], { defval:'' });
     for (const r of rows) {
-      const id = String(r['직원ID']||'').trim(); if (!id) continue;
-      data.employees.push({ id, name:String(r['이름']||'').trim(), code:String(r['사원코드']||'').trim(), rank:String(r['직급']||'').trim(), baseSalary:Number(r['기본급(월)']||0), isCosd:String(r['COSD여부']||'').toUpperCase()==='Y' });
+      const id = String(r['직원ID']||'').trim();
+      if (!id || id.startsWith('(예시)')) continue;
+      data.employees.push({ id, name:String(r['이름']||'').trim(), code:String(r['사원코드']||'').trim(), rank:String(r['직급']||'').trim(), baseSalary:Number(r['기본급(월)']||0), isCosd:String(r['COSD여부']||'').toUpperCase()==='Y', hireDate:String(r['입사일']||'').trim()||null });
     }
     msgs.push(`<span style="color:var(--grn)">✓ 직원마스터</span>: ${data.employees.length}명`);
   }
   if (wb.SheetNames.includes('과제마스터')) {
     const rows = XLSX.utils.sheet_to_json(wb.Sheets['과제마스터'], { defval:'' });
     for (const r of rows) {
-      const id = String(r['과제ID']||'').trim(); if (!id) continue;
+      const id = String(r['과제ID']||'').trim();
+      if (!id || id.startsWith('(예시)')) continue;
       data.projects.push({ id, name:String(r['과제명']||'').trim(), type:String(r['유형']||'normal').trim().toLowerCase(), budget:Number(r['인건비예산(원)']||0), include345:String(r['3책5공포함']||'').toUpperCase()==='Y', minRate:Number(r['최소참여율%']||10) });
     }
     msgs.push(`<span style="color:var(--grn)">✓ 과제마스터</span>: ${data.projects.length}건`);
@@ -2329,7 +2353,7 @@ function parseXL(wb) {
     let cnt = 0;
     for (const r of rows) {
       const eid=String(r['직원ID']||'').trim(), pid=String(r['과제ID']||'').trim(), role=String(r['역할']||'공동').trim();
-      if (!eid||!pid) continue;
+      if (!eid||!pid||eid.startsWith('(예시)')||pid.startsWith('(예시)')) continue;
       if (!data.participation[eid]) data.participation[eid]={};
       data.participation[eid][pid] = MN.map(mn=>({rate:Number(r[mn+'%']||0),role})); cnt++;
     }
@@ -2338,7 +2362,8 @@ function parseXL(wb) {
   if (wb.SheetNames.includes('급여실적')) {
     const rows = XLSX.utils.sheet_to_json(wb.Sheets['급여실적'], { defval:'' });
     for (const r of rows) {
-      const eid=String(r['직원ID']||'').trim(); if (!eid) continue;
+      const eid=String(r['직원ID']||'').trim();
+      if (!eid||eid.startsWith('(예시)')) continue;
       data.salary[eid]=MN.map(mn=>{const v=r[mn];return(v!==''&&v!=null)?Number(v):null;});
     }
     msgs.push(`<span style="color:var(--grn)">✓ 급여실적</span>: ${Object.keys(data.salary).length}명`);
@@ -2356,6 +2381,101 @@ async function applyImport() {
   _pImport = null; closeOv('import-ov'); render(); toast('✓ 데이터 적용 완료');
   addHistory('엑셀 불러오기', `직원 ${d.employees.length}명 · 과제 ${d.projects.length}건`);
   await saveToDB();
+}
+
+// ── 전용 입력 양식 다운로드 ────────────────────────────────
+function downloadTemplate() {
+  if (!window.XLSX) { toast('⚠ 엑셀 라이브러리가 아직 로드 중입니다. 잠시 후 다시 시도해 주세요.'); return; }
+  const wb = XLSX.utils.book_new();
+  const year = S.year;
+
+  // ① 안내 시트
+  const ws0 = XLSX.utils.aoa_to_sheet([
+    ['연구과제 인건비 관리 — 데이터 입력 양식 (' + year + '년)'],
+    [''],
+    ['■ 사용 방법'],
+    ['  1. 아래 각 시트에 데이터를 입력하세요.'],
+    ['  2. 파일 저장 후 프로그램 상단 [↑ 불러오기] 버튼으로 가져오세요.'],
+    ['  3. 미리보기 확인 후 [적용하기] 클릭 → 대시보드·과제·직원·급여 전체 보드에 반영됩니다.'],
+    [''],
+    ['■ 시트별 설명', '필수', '내용'],
+    ['  직원마스터',  '필수', '직원 기본 정보 (ID·이름·직급·기본급·COSD여부·입사일)'],
+    ['  과제마스터',  '필수', '과제 정보 (ID·예산·유형·최소참여율 등)'],
+    ['  참여율',      '필수', '직원×과제×월별 참여율 — 0 입력 시 해당 월 미참여'],
+    ['  급여실적',    '선택', '실제 지급 급여 — 확정된 월만 입력, 미확정은 빈칸'],
+    [''],
+    ['■ 주의 사항'],
+    ['  · (예시) 로 시작하는 행은 가져오기 시 자동 무시됩니다. 삭제하지 않아도 됩니다.'],
+    ['  · 직원ID / 과제ID는 모든 시트에서 동일하게 사용됩니다. (영문+숫자 조합 권장)'],
+    ['  · 기존 데이터와 같은 ID가 있으면 덮어씌워집니다.'],
+    ['  · 역할 입력값: 책임 / 공동 / cosd'],
+    ['  · 유형 입력값: 일반 / 특정 / cosd'],
+    ['  · 3책5공포함 · COSD여부: Y 또는 N'],
+    ['  · 입사일 형식: YYYY-MM-DD  (예: 2020-03-01)'],
+    ['  · 참여율: 0~100 사이 숫자(%) — 소수점 불가'],
+    ['  · 기본급·급여·예산: 원 단위 숫자 (쉼표 없이)'],
+  ]);
+  ws0['!cols'] = [{wch:55},{wch:8},{wch:50}];
+  XLSX.utils.book_append_sheet(wb, ws0, '📋 안내');
+
+  // ② 직원마스터
+  const empHeader = ['직원ID','이름','사원코드','직급','기본급(월)','COSD여부','입사일'];
+  const empEx = [
+    ['(예시)EMP001','홍길동','A001','책임연구원',4500000,'N','2020-03-01'],
+    ['(예시)EMP002','이순신','A002','선임연구원',3800000,'Y','2019-07-15'],
+    ['(예시)EMP003','강감찬','A003','연구원',3200000,'N','2022-01-10'],
+  ];
+  const empData = S.employees.map(e => [e.id, e.name, e.code||'', e.rank||'', e.baseSalary||0, e.isCosd?'Y':'N', e.hireDate||'']);
+  const wsEmp = XLSX.utils.aoa_to_sheet([empHeader, ...empEx, ...empData]);
+  wsEmp['!cols'] = [{wch:14},{wch:12},{wch:10},{wch:14},{wch:14},{wch:10},{wch:14}];
+  XLSX.utils.book_append_sheet(wb, wsEmp, '직원마스터');
+
+  // ③ 과제마스터
+  const projHeader = ['과제ID','과제명','유형','인건비예산(원)','3책5공포함','최소참여율%'];
+  const projEx = [
+    ['(예시)PRJ001','스마트팜 기초연구','일반',80000000,'Y',10],
+    ['(예시)PRJ002','AI 응용기술 개발','특정',120000000,'Y',15],
+  ];
+  const projData = S.projects.map(p => [p.id, p.name, p.type||'일반', p.budget||0, p.include345?'Y':'N', p.minRate||10]);
+  const wsProj = XLSX.utils.aoa_to_sheet([projHeader, ...projEx, ...projData]);
+  wsProj['!cols'] = [{wch:14},{wch:30},{wch:8},{wch:16},{wch:12},{wch:12}];
+  XLSX.utils.book_append_sheet(wb, wsProj, '과제마스터');
+
+  // ④ 참여율
+  const partHeader = ['직원ID','과제ID','역할','1월%','2월%','3월%','4월%','5월%','6월%','7월%','8월%','9월%','10월%','11월%','12월%'];
+  const partEx = [
+    ['(예시)EMP001','(예시)PRJ001','책임',30,30,30,30,30,30,30,30,30,30,30,30],
+    ['(예시)EMP001','(예시)PRJ002','공동',20,20,0,0,20,20,20,20,20,0,0,0],
+    ['(예시)EMP002','(예시)PRJ001','공동',25,25,25,25,0,0,0,25,25,25,25,25],
+  ];
+  const partData = [];
+  for (const eid of Object.keys(yPart())) {
+    for (const pid of Object.keys(yPart()[eid])) {
+      const months = yPart()[eid][pid];
+      const role = months[0]?.role || '공동';
+      partData.push([eid, pid, role, ...months.map(mv => mv?.rate ?? 0)]);
+    }
+  }
+  const wsPart = XLSX.utils.aoa_to_sheet([partHeader, ...partEx, ...partData]);
+  wsPart['!cols'] = [{wch:14},{wch:14},{wch:8},...Array(12).fill({wch:7})];
+  XLSX.utils.book_append_sheet(wb, wsPart, '참여율');
+
+  // ⑤ 급여실적
+  const salHeader = ['직원ID','이름','1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  const salEx = [
+    ['(예시)EMP001','홍길동',4500000,4500000,'','','','','','','','','',''],
+    ['(예시)EMP002','이순신',3800000,3800000,3800000,'','','','','','','','',''],
+  ];
+  const salData = S.employees.map(e => {
+    const sal12 = Array.from({length:12}, (_,m) => { const v=ySal()[e.id]?.[m]; return (v!=null&&v>0)?v:''; });
+    return [e.id, e.name, ...sal12];
+  });
+  const wsSal = XLSX.utils.aoa_to_sheet([salHeader, ...salEx, ...salData]);
+  wsSal['!cols'] = [{wch:14},{wch:12},...Array(12).fill({wch:12})];
+  XLSX.utils.book_append_sheet(wb, wsSal, '급여실적');
+
+  XLSX.writeFile(wb, `인건비관리_입력양식_${year}.xlsx`);
+  toast('📥 입력 양식 다운로드 완료 — (예시) 행은 가져오기 시 자동 무시됩니다');
 }
 
 function exportXL() {
@@ -4079,6 +4199,42 @@ function saveRateToDB(eid, pid, m) {
       toast(`⚠ 저장 실패: ${e.message}`, 3000);
     }
   }, 800);
+}
+
+// 과제별현황 인라인 셀 직접 입력 저장
+function setRateInline(eid, pid, m, val) {
+  if (isLocked(eid, m)) { toast('🔒 잠긴 월이에요. 잠금 해제 후 수정하세요'); return; }
+  const rate = clamp(parseInt(val) ?? 0, 0, 100);
+  if (!yPart()[eid]) yPart()[eid] = {};
+  if (!yPart()[eid][pid])
+    yPart()[eid][pid] = Array.from({length:12}, () => ({rate:0, role:'공동'}));
+  const old = yPart()[eid][pid][m].rate;
+  yPart()[eid][pid][m].rate = rate;
+  // 입력 값 클램프 반영
+  const inp = document.getElementById(`ri-${eid}-${pid}-${m}`);
+  if (inp) {
+    inp.value = rate;
+    const proj = S.projects.find(p => p.id === pid);
+    const low = rate > 0 && proj && rate < proj.minRate;
+    const effNow = effRate(eid, m);
+    const role = getRole(eid, pid, m);
+    const over = effNow > 100 && role !== 'cosd';
+    inp.className = 'rate-inp ' + (over ? 'ri-over' : low ? 'ri-low' : rate > 0 ? 'ri-ok' : '');
+  }
+  // 합계 행 부분 갱신
+  const parts = S.employees.filter(e => yPart()[e.id]?.[pid]);
+  const tot = parts.reduce((s, e) => s + mExec(e.id, pid, m), 0);
+  const sumEl = document.getElementById(`psum-${pid}-${m}`);
+  if (sumEl) { sumEl.textContent = tot > 0 ? fmt(tot) : '-'; }
+  refresh345Badge(eid);
+  refreshHeatmapRow(eid);
+  renderSidebar();
+  if (old !== rate) {
+    const emp = S.employees.find(e => e.id === eid);
+    const proj = S.projects.find(p => p.id === pid);
+    addHistory('참여율 변경', `${emp?.name} · ${proj?.name} · ${MN[m]}: ${old}% → ${rate}%`);
+    saveRateToDB(eid, pid, m);
+  }
 }
 
 // 여러 월 참여율 일괄 저장
