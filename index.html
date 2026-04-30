@@ -723,8 +723,6 @@ const TAB_ID = sessionStorage.getItem('tab-id') || (() => {
 
 const db = supabase.createClient(SUPA_URL, SUPA_KEY, {
   auth: {
-    storageKey: 'cosd-auth-' + TAB_ID,   // 탭별 독립 잠금 키
-    storage: window.sessionStorage,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
