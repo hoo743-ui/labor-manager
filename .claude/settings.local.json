@@ -5,7 +5,12 @@
       "Bash(git add:*)",
       "WebSearch",
       "Read(//c/Users/LG/**)",
-      "mcp__coplay-mcp__create_game_object"
+      "mcp__coplay-mcp__create_game_object",
+      "Bash(gh secret *)",
+      "Bash(where gh *)",
+      "Bash(winget list *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)"
     ]
   }
 }
