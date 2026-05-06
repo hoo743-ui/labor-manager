@@ -722,35 +722,78 @@ const TAB_ID = sessionStorage.getItem('tab-id') || (() => {
   return id;
 })();
 
-// Web Worker fetch: content script는 Worker 컨텍스트에 주입되지 않으므로
-// Worker 내부의 fetch는 확장프로그램에 패치되지 않은 네이티브 fetch를 사용함
-const _fetchWorker = new Worker(window.location.origin + '/fetch-worker.js');
-const _workerPending = Object.create(null);
-_fetchWorker.onmessage = function(e) {
-  const {id, ok, status, statusText, headers: hdrs, body, error} = e.data;
-  const p = _workerPending[id];
-  if (!p) return;
-  delete _workerPending[id];
-  if (error !== undefined) { p.reject(new TypeError(error)); return; }
-  const fakeHeaders = {
-    get: k => hdrs[k.toLowerCase()] ?? null,
-    has: k => k.toLowerCase() in hdrs,
-    forEach: (fn) => Object.entries(hdrs).forEach(([k, v]) => fn(v, k))
-  };
-  p.resolve({
-    ok, status, statusText,
-    headers: fakeHeaders,
-    json: () => { try { return Promise.resolve(JSON.parse(body)); } catch(e2) { return Promise.reject(e2); } },
-    text: () => Promise.resolve(body),
-    clone() { return this; },
-  });
+// Blob Worker: 외부 파일 없이 인라인 코드로 생성 → 403/파일 로드 실패 없음
+// content script는 Worker 컨텍스트에 주입되지 않으므로 self.fetch = 네이티브 fetch
+const _WORKER_SRC = `
+self.onmessage = async function(e) {
+  var d = e.data, id = d.id;
+  try {
+    var opts = {method: d.method || 'GET', headers: d.headers || {}};
+    if (d.body != null) opts.body = d.body;
+    var res = await fetch(d.url, opts);
+    var text = await res.text();
+    var hdrs = {};
+    res.headers.forEach(function(v,k){ hdrs[k]=v; });
+    self.postMessage({id:id, ok:res.ok, status:res.status, statusText:res.statusText, headers:hdrs, body:text});
+  } catch(err) {
+    self.postMessage({id:id, error: err.message || String(err)});
+  }
 };
-_fetchWorker.onerror = function(e) { console.error('FetchWorker error:', e.message); };
+`;
+const _workerPending = Object.create(null);
+let _fetchWorker = null;
+
+function _rejectAllPending(msg) {
+  for (const id of Object.keys(_workerPending)) {
+    const p = _workerPending[id];
+    delete _workerPending[id];
+    p.reject(new TypeError(msg));
+  }
+}
+
+function _makeWorker() {
+  try {
+    const blob = new Blob([_WORKER_SRC], {type: 'text/javascript'});
+    const w = new Worker(URL.createObjectURL(blob));
+    w.onmessage = function(e) {
+      const {id, ok, status, statusText, headers: hdrs, body, error} = e.data;
+      const p = _workerPending[id];
+      if (!p) return;
+      delete _workerPending[id];
+      if (error !== undefined) { p.reject(new TypeError(error)); return; }
+      const fakeHeaders = {
+        get: k => hdrs[k.toLowerCase()] ?? null,
+        has: k => k.toLowerCase() in hdrs,
+        forEach: fn => Object.entries(hdrs).forEach(([k,v]) => fn(v,k))
+      };
+      p.resolve({
+        ok, status, statusText, headers: fakeHeaders,
+        json: () => { try { return Promise.resolve(JSON.parse(body)); } catch(e2) { return Promise.reject(e2); } },
+        text: () => Promise.resolve(body),
+        clone() { return this; },
+      });
+    };
+    w.onerror = function(ev) {
+      console.warn('FetchWorker crashed, recreating:', ev.message);
+      _fetchWorker = null;
+      _rejectAllPending('Worker error: ' + (ev.message || 'unknown'));
+      setTimeout(() => { _fetchWorker = _makeWorker(); }, 200);
+    };
+    return w;
+  } catch(err) {
+    console.warn('Worker creation failed:', err);
+    return null;
+  }
+}
+_fetchWorker = _makeWorker();
 
 function _workerFetch(url, init = {}) {
+  // Worker 없으면 네이티브 fetch로 직접 (incognito 등 확장 없는 환경)
+  if (!_fetchWorker) return (window._nativeFetch || fetch)(url, init);
   return new Promise((resolve, reject) => {
     const id = Math.random().toString(36).slice(2, 12);
     const timer = setTimeout(() => {
+      if (!_workerPending[id]) return;
       delete _workerPending[id];
       reject(new TypeError('Request timed out'));
     }, 15000);
@@ -760,7 +803,7 @@ function _workerFetch(url, init = {}) {
     };
     if (init.signal) {
       init.signal.addEventListener('abort', () => {
-        if (_workerPending[id]) { delete _workerPending[id]; clearTimeout(timer); reject(new DOMException('Aborted', 'AbortError')); }
+        if (_workerPending[id]) { delete _workerPending[id]; clearTimeout(timer); reject(new DOMException('Aborted','AbortError')); }
       });
     }
     const rawH = init.headers || {};
@@ -769,7 +812,6 @@ function _workerFetch(url, init = {}) {
   });
 }
 
-// Worker fetch: content script가 패치한 window.fetch와 무관하게 self.fetch(네이티브) 사용
 function _supaFetch(url, init = {}) {
   return _workerFetch(url, init);
 }
