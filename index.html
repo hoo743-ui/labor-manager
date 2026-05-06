@@ -3916,23 +3916,59 @@ async function clearFeedback() {
 
 // ── DB LAYER ────────────────────────────────────
 
-let _loadingInProgress = false;
+// 시퀀스 번호 방식: 새 요청이 오면 이전 결과를 무시 (블로킹 없음)
+let _loadSeq = 0;
+
+function _applyDbRows(empRes, projRes, partRes, salRes) {
+  if (empRes.data.length > 0)
+    S.employees = empRes.data.map(r => ({
+      id: r.id, name: r.name, code: r.code || '',
+      rank: r.rank || '연구원', baseSalary: r.base_salary || 0, isCosd: r.is_cosd || false,
+      hireDate: r.hire_date || null,
+    }));
+  if (projRes.data.length > 0)
+    S.projects = projRes.data.map(r => ({
+      id: r.id, name: r.name, type: r.type || 'normal',
+      budget: r.budget || 0, include345: r.include_345 !== false,
+      minRate: r.min_rate || 10, category: r.category || '',
+      startDate: r.start_date || null, endDate: r.end_date || null, piId: r.pi_id || null,
+    }));
+  if (partRes.data?.length > 0) {
+    S.participation = {};
+    for (const r of partRes.data) {
+      const yr = r.year ?? S.year;
+      if (!S.participation[yr]) S.participation[yr] = {};
+      if (!S.participation[yr][r.emp_id]) S.participation[yr][r.emp_id] = {};
+      if (!S.participation[yr][r.emp_id][r.proj_id])
+        S.participation[yr][r.emp_id][r.proj_id] = Array.from({length:12}, () => ({rate:0, role:'공동'}));
+      S.participation[yr][r.emp_id][r.proj_id][r.month] = {rate: r.rate, role: r.role};
+    }
+  }
+  if (salRes.data?.length > 0) {
+    S.salary = {};
+    for (const r of salRes.data) {
+      const yr = r.year ?? S.year;
+      if (!S.salary[yr]) S.salary[yr] = {};
+      if (!S.salary[yr][r.emp_id]) S.salary[yr][r.emp_id] = Array(12).fill(null);
+      S.salary[yr][r.emp_id][r.month] = r.amount;
+    }
+  }
+}
 
 // ── 소프트 새로고침 ─────────────────────────────
-// 브라우저 새로고침(F5) 대신 사용 — 세션·채널 유지, 데이터만 재조회
 async function softRefresh() {
-  if (_loadingInProgress) return;
+  const seq = ++_loadSeq;
   const btn = document.getElementById('btn-soft-refresh');
   if (btn) { btn.disabled = true; btn.textContent = '🔄 로딩...'; }
-
-  _loadingInProgress = true;
   setDbStatus('connecting');
-  const _refreshTimer = setTimeout(() => {
-    _loadingInProgress = false;
+
+  const _timer = setTimeout(() => {
+    if (seq !== _loadSeq) return;
     setDbStatus('error');
     if (btn) { btn.disabled = false; btn.textContent = '🔄 새로고침'; }
-    toast('⚠ 연결 시간 초과 — 확장 프로그램을 비활성화하거나 시크릿 모드를 사용해주세요', 5000);
+    toast('⚠ 연결 시간 초과 — 네트워크를 확인해주세요', 5000);
   }, 10000);
+
   try {
     const [empRes, projRes, partRes, salRes] = await Promise.all([
       db.from('employees').select('*'),
@@ -3940,58 +3976,23 @@ async function softRefresh() {
       db.from('participation').select('*'),
       db.from('salary').select('*'),
     ]);
+    if (seq !== _loadSeq) return; // 더 새로운 요청이 시작됐으면 결과 버림
     if (empRes.error) throw empRes.error;
     if (projRes.error) throw projRes.error;
     if (partRes.error) throw partRes.error;
     if (salRes.error) throw salRes.error;
 
-    if (empRes.data.length > 0)
-      S.employees = empRes.data.map(r => ({
-        id: r.id, name: r.name, code: r.code || '',
-        rank: r.rank || '연구원', baseSalary: r.base_salary || 0, isCosd: r.is_cosd || false,
-        hireDate: r.hire_date || null,
-      }));
-
-    if (projRes.data.length > 0)
-      S.projects = projRes.data.map(r => ({
-        id: r.id, name: r.name, type: r.type || 'normal',
-        budget: r.budget || 0, include345: r.include_345 !== false,
-        minRate: r.min_rate || 10, category: r.category || '',
-        startDate: r.start_date || null, endDate: r.end_date || null, piId: r.pi_id || null,
-      }));
-
-    if (partRes.data?.length > 0) {
-      S.participation = {};
-      for (const r of partRes.data) {
-        const yr = r.year ?? S.year;
-        if (!S.participation[yr]) S.participation[yr] = {};
-        if (!S.participation[yr][r.emp_id]) S.participation[yr][r.emp_id] = {};
-        if (!S.participation[yr][r.emp_id][r.proj_id])
-          S.participation[yr][r.emp_id][r.proj_id] = Array.from({length:12}, () => ({rate:0, role:'공동'}));
-        S.participation[yr][r.emp_id][r.proj_id][r.month] = {rate: r.rate, role: r.role};
-      }
-    }
-
-    if (salRes.data?.length > 0) {
-      S.salary = {};
-      for (const r of salRes.data) {
-        const yr = r.year ?? S.year;
-        if (!S.salary[yr]) S.salary[yr] = {};
-        if (!S.salary[yr][r.emp_id]) S.salary[yr][r.emp_id] = Array(12).fill(null);
-        S.salary[yr][r.emp_id][r.month] = r.amount;
-      }
-    }
-
+    _applyDbRows(empRes, projRes, partRes, salRes);
     setDbStatus('ok');
     saveToCache();
     render();
     toast('✓ 새로고침 완료');
   } catch(e) {
+    if (seq !== _loadSeq) return;
     setDbStatus('error');
     toast(`⚠ 새로고침 실패: ${e.message}`, 3000);
   } finally {
-    clearTimeout(_refreshTimer);
-    _loadingInProgress = false;
+    clearTimeout(_timer);
     if (btn) { btn.disabled = false; btn.textContent = '🔄 새로고침'; }
   }
 }
@@ -4000,9 +4001,11 @@ async function softRefresh() {
 function _cacheKey() {
   return 'rms-cache-' + (S.currentUser?.email || 'guest');
 }
+const CACHE_VERSION = 2;
 function saveToCache() {
   try {
     localStorage.setItem(_cacheKey(), JSON.stringify({
+      v: CACHE_VERSION,
       employees: S.employees,
       projects: S.projects,
       participation: S.participation,
@@ -4016,7 +4019,9 @@ function loadFromCache() {
     const raw = localStorage.getItem(_cacheKey());
     if (!raw) return false;
     const d = JSON.parse(raw);
-    if (!d || (!d.employees?.length && !d.projects?.length)) return false;
+    // 구버전 캐시(오염된 데이터)는 버리고 DB에서 새로 받음
+    if (!d || d.v !== CACHE_VERSION) { localStorage.removeItem(_cacheKey()); return false; }
+    if (!d.employees?.length && !d.projects?.length) return false;
     S.employees     = d.employees    || [];
     S.projects      = d.projects     || [];
     S.participation = d.participation|| {};
@@ -4028,8 +4033,7 @@ function loadFromCache() {
 }
 
 async function loadFromDB() {
-  if (_loadingInProgress) return;
-  _loadingInProgress = true;
+  const seq = ++_loadSeq;
 
   // ① 캐시 먼저 — 있으면 즉시 화면 표시
   const hadCache = loadFromCache();
@@ -4037,14 +4041,19 @@ async function loadFromDB() {
     hideLoading();
     setDbStatus('connecting');
     render();
-    toast('📦 캐시 데이터 표시 중 · DB 동기화 중...', 1500);
   } else {
     showLoading('데이터 불러오는 중...');
     setDbStatus('connecting');
   }
 
-  // ② DB에서 최신 데이터 백그라운드 동기화
-  const _loadTimeout = setTimeout(() => { hideLoading(); _loadingInProgress = false; setDbStatus('error'); toast('⚠ DB 응답 없음 — 네트워크를 확인해주세요', 4000); }, 15000);
+  // ② DB에서 최신 데이터 동기화
+  const _loadTimeout = setTimeout(() => {
+    if (seq !== _loadSeq) return;
+    hideLoading();
+    setDbStatus('error');
+    toast('⚠ DB 응답 없음 — 네트워크를 확인해주세요', 4000);
+  }, 15000);
+
   try {
     const [empRes, projRes, partRes, salRes] = await Promise.all([
       db.from('employees').select('*'),
@@ -4053,61 +4062,19 @@ async function loadFromDB() {
       db.from('salary').select('*'),
     ]);
 
+    if (seq !== _loadSeq) return; // 더 새로운 요청이 시작됐으면 결과 버림
+
     if (empRes.error) throw empRes.error;
     if (projRes.error) throw projRes.error;
     if (partRes.error) throw partRes.error;
     if (salRes.error) throw salRes.error;
 
-    if (empRes.data.length > 0) {
-      S.employees = empRes.data.map(r => ({
-        id: r.id, name: r.name, code: r.code || '',
-        rank: r.rank || '연구원',
-        baseSalary: r.base_salary || 0,
-        isCosd: r.is_cosd || false,
-        hireDate: r.hire_date || null,
-      }));
-    }
-
-    if (projRes.data.length > 0) {
-      S.projects = projRes.data.map(r => ({
-        id: r.id, name: r.name, type: r.type || 'normal',
-        budget: r.budget || 0,
-        include345: r.include_345 !== false,
-        minRate: r.min_rate || 10,
-        category: r.category || '',
-        startDate: r.start_date || null,
-        endDate: r.end_date || null,
-        piId: r.pi_id || null,
-      }));
-    }
-
-    // 참여율 — 연도별
-    if (partRes.data && partRes.data.length > 0) {
-      S.participation = {};
-      for (const r of partRes.data) {
-        const yr = r.year ?? S.year;
-        if (!S.participation[yr]) S.participation[yr] = {};
-        if (!S.participation[yr][r.emp_id]) S.participation[yr][r.emp_id] = {};
-        if (!S.participation[yr][r.emp_id][r.proj_id])
-          S.participation[yr][r.emp_id][r.proj_id] = Array.from({length:12}, () => ({rate:0, role:'공동'}));
-        S.participation[yr][r.emp_id][r.proj_id][r.month] = {rate: r.rate, role: r.role};
-      }
-    }
-
-    // 급여 — 연도별
-    if (salRes.data && salRes.data.length > 0) {
-      S.salary = {};
-      for (const r of salRes.data) {
-        const yr = r.year ?? S.year;
-        if (!S.salary[yr]) S.salary[yr] = {};
-        if (!S.salary[yr][r.emp_id]) S.salary[yr][r.emp_id] = Array(12).fill(null);
-        S.salary[yr][r.emp_id][r.month] = r.amount;
-      }
-    }
+    _applyDbRows(empRes, projRes, partRes, salRes);
 
     // 관리자 여부
     if (S.currentUser) {
       const { data: adminData } = await db.from('admins').select('email').eq('email', S.currentUser.email).maybeSingle();
+      if (seq !== _loadSeq) return;
       S.isAdmin = !!adminData;
       updateNavVisibility();
     }
@@ -4116,7 +4083,6 @@ async function loadFromDB() {
     if (!S.selProj) S.selProj = S.projects[0]?.id;
     if (!S.selEmp)  S.selEmp  = S.employees[0]?.id;
 
-    // ③ 캐시 저장 후 화면 갱신
     saveToCache();
     render();
 
@@ -4128,6 +4094,7 @@ async function loadFromDB() {
     }
 
   } catch(e) {
+    if (seq !== _loadSeq) return;
     setDbStatus('error');
     const msg = e.message?.includes('fetch') ? '네트워크 연결을 확인해주세요'
       : e.message?.includes('JWT') ? '세션이 만료됐어요. 다시 로그인해주세요'
@@ -4136,8 +4103,7 @@ async function loadFromDB() {
     if (!hadCache) render();
   } finally {
     clearTimeout(_loadTimeout);
-    hideLoading();
-    _loadingInProgress = false;
+    if (seq === _loadSeq) hideLoading();
   }
 }
 
