@@ -759,7 +759,9 @@ function _xhrFetch(url, init = {}) {
 const _useProxy = window.location.protocol === 'https:' &&
                   !window.location.hostname.endsWith('.github.io');
 function _supaFetch(url, init = {}) {
-  const u = (_useProxy && url.startsWith(SUPA_URL + '/rest/')) ? url.replace(SUPA_URL, '/supa') : url;
+  const u = (_useProxy && url.startsWith(SUPA_URL + '/rest/'))
+    ? '/api/supa' + url.slice(SUPA_URL.length)
+    : url;
   return _xhrFetch(u, init);
 }
 
