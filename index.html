@@ -722,12 +722,23 @@ const TAB_ID = sessionStorage.getItem('tab-id') || (() => {
   return id;
 })();
 
+// Vercel 배포 환경에서는 /supa 프록시 경유 → 확장 프로그램 차단 우회
+const _useProxy = window.location.protocol === 'https:' &&
+                  !window.location.hostname.endsWith('.github.io');
+const _proxyFetch = _useProxy
+  ? (url, options) => fetch(
+      url.startsWith(SUPA_URL + '/rest/') ? url.replace(SUPA_URL, '/supa') : url,
+      options
+    )
+  : fetch;
+
 const db = supabase.createClient(SUPA_URL, SUPA_KEY, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
-  }
+  },
+  global: { fetch: _proxyFetch }
 });
 
 const MN = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
@@ -3916,6 +3927,12 @@ async function softRefresh() {
 
   _loadingInProgress = true;
   setDbStatus('connecting');
+  const _refreshTimer = setTimeout(() => {
+    _loadingInProgress = false;
+    setDbStatus('error');
+    if (btn) { btn.disabled = false; btn.textContent = '🔄 새로고침'; }
+    toast('⚠ 연결 시간 초과 — 확장 프로그램을 비활성화하거나 시크릿 모드를 사용해주세요', 5000);
+  }, 10000);
   try {
     const [empRes, projRes, partRes, salRes] = await Promise.all([
       db.from('employees').select('*'),
@@ -3973,6 +3990,7 @@ async function softRefresh() {
     setDbStatus('error');
     toast(`⚠ 새로고침 실패: ${e.message}`, 3000);
   } finally {
+    clearTimeout(_refreshTimer);
     _loadingInProgress = false;
     if (btn) { btn.disabled = false; btn.textContent = '🔄 새로고침'; }
   }
