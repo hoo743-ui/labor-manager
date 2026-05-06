@@ -3941,6 +3941,7 @@ async function softRefresh() {
         startDate: r.start_date || null, endDate: r.end_date || null, piId: r.pi_id || null,
       }));
 
+    S.participation = {};
     if (partRes.data?.length > 0) {
       for (const r of partRes.data) {
         const yr = r.year ?? S.year;
@@ -3952,6 +3953,7 @@ async function softRefresh() {
       }
     }
 
+    S.salary = {};
     if (salRes.data?.length > 0) {
       for (const r of salRes.data) {
         const yr = r.year ?? S.year;
