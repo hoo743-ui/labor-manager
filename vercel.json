@@ -4,5 +4,10 @@
       "source": "/supa/:path*",
       "destination": "/api/supa/:path*"
     }
-  ]
+  ],
+  "functions": {
+    "api/**/*.js": {
+      "runtime": "nodejs18.x"
+    }
+  }
 }
