@@ -3925,6 +3925,8 @@ async function softRefresh() {
     ]);
     if (empRes.error) throw empRes.error;
     if (projRes.error) throw projRes.error;
+    if (partRes.error) throw partRes.error;
+    if (salRes.error) throw salRes.error;
 
     if (empRes.data.length > 0)
       S.employees = empRes.data.map(r => ({
@@ -4035,6 +4037,8 @@ async function loadFromDB() {
 
     if (empRes.error) throw empRes.error;
     if (projRes.error) throw projRes.error;
+    if (partRes.error) throw partRes.error;
+    if (salRes.error) throw salRes.error;
 
     if (empRes.data.length > 0) {
       S.employees = empRes.data.map(r => ({
