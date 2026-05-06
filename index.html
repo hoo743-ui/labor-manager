@@ -722,15 +722,46 @@ const TAB_ID = sessionStorage.getItem('tab-id') || (() => {
   return id;
 })();
 
-// Vercel 배포 환경에서는 /supa 프록시 경유 → 확장 프로그램 차단 우회
+// XHR 기반 fetch: 확장 프로그램의 window.fetch 오버라이드를 우회
+function _xhrFetch(url, init = {}) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open(init.method || 'GET', url, true);
+    const rawH = init.headers || {};
+    const headers = typeof rawH.entries === 'function' ? Object.fromEntries(rawH.entries()) : rawH;
+    Object.entries(headers).forEach(([k, v]) => { try { xhr.setRequestHeader(k, String(v)); } catch(_) {} });
+    xhr.timeout = 12000;
+    xhr.onload = () => {
+      const hdrMap = {};
+      xhr.getAllResponseHeaders().trim().split(/[\r\n]+/).forEach(line => {
+        const i = line.indexOf(': ');
+        if (i > 0) hdrMap[line.slice(0, i).toLowerCase()] = line.slice(i + 2);
+      });
+      const fakeHeaders = { get: k => hdrMap[k.toLowerCase()] ?? null, has: k => k.toLowerCase() in hdrMap };
+      const body = xhr.responseText;
+      resolve({
+        ok: xhr.status >= 200 && xhr.status < 300,
+        status: xhr.status, statusText: xhr.statusText,
+        headers: fakeHeaders,
+        json: () => { try { return Promise.resolve(JSON.parse(body)); } catch(e) { return Promise.reject(e); } },
+        text: () => Promise.resolve(body),
+        clone() { return this; },
+      });
+    };
+    xhr.onerror = () => reject(new TypeError('Network error'));
+    xhr.ontimeout = () => reject(new TypeError('Request timed out'));
+    if (init.signal) init.signal.addEventListener('abort', () => { xhr.abort(); reject(new DOMException('Aborted', 'AbortError')); });
+    xhr.send(init.body ?? null);
+  });
+}
+
+// Vercel 프록시(도메인 차단 우회) + XHR(fetch 오버라이드 우회) 조합
 const _useProxy = window.location.protocol === 'https:' &&
                   !window.location.hostname.endsWith('.github.io');
-const _proxyFetch = _useProxy
-  ? (url, options) => fetch(
-      url.startsWith(SUPA_URL + '/rest/') ? url.replace(SUPA_URL, '/supa') : url,
-      options
-    )
-  : fetch;
+function _supaFetch(url, init = {}) {
+  const u = (_useProxy && url.startsWith(SUPA_URL + '/rest/')) ? url.replace(SUPA_URL, '/supa') : url;
+  return _xhrFetch(u, init);
+}
 
 const db = supabase.createClient(SUPA_URL, SUPA_KEY, {
   auth: {
@@ -738,7 +769,7 @@ const db = supabase.createClient(SUPA_URL, SUPA_KEY, {
     persistSession: true,
     detectSessionInUrl: false,
   },
-  global: { fetch: _proxyFetch }
+  global: { fetch: _supaFetch }
 });
 
 const MN = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
