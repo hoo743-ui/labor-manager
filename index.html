@@ -722,47 +722,77 @@ const TAB_ID = sessionStorage.getItem('tab-id') || (() => {
   return id;
 })();
 
-// XHR 기반 fetch: 확장 프로그램의 window.fetch 오버라이드를 우회
-function _xhrFetch(url, init = {}) {
+// Web Worker fetch: content script는 Worker 컨텍스트에 주입되지 않으므로
+// Worker 내부의 fetch는 확장프로그램에 패치되지 않은 네이티브 fetch를 사용함
+const _workerCode = `
+self.onmessage = async function(e) {
+  const {id, url, method, headers, body} = e.data;
+  try {
+    const opts = {method: method || 'GET', headers: headers || {}};
+    if (body != null) opts.body = body;
+    const res = await fetch(url, opts);
+    const text = await res.text();
+    const hdrs = {};
+    res.headers.forEach((v, k) => { hdrs[k] = v; });
+    self.postMessage({id, ok: res.ok, status: res.status, statusText: res.statusText, headers: hdrs, body: text});
+  } catch(err) {
+    self.postMessage({id, error: err.message || String(err)});
+  }
+};
+`;
+const _fetchWorker = new Worker(URL.createObjectURL(new Blob([_workerCode], {type: 'text/javascript'})));
+const _workerPending = Object.create(null);
+_fetchWorker.onmessage = function(e) {
+  const {id, ok, status, statusText, headers: hdrs, body, error} = e.data;
+  const p = _workerPending[id];
+  if (!p) return;
+  delete _workerPending[id];
+  if (error !== undefined) { p.reject(new TypeError(error)); return; }
+  const fakeHeaders = {
+    get: k => hdrs[k.toLowerCase()] ?? null,
+    has: k => k.toLowerCase() in hdrs,
+    forEach: (fn) => Object.entries(hdrs).forEach(([k, v]) => fn(v, k))
+  };
+  p.resolve({
+    ok, status, statusText,
+    headers: fakeHeaders,
+    json: () => { try { return Promise.resolve(JSON.parse(body)); } catch(e2) { return Promise.reject(e2); } },
+    text: () => Promise.resolve(body),
+    clone() { return this; },
+  });
+};
+_fetchWorker.onerror = function(e) { console.error('FetchWorker error:', e.message); };
+
+function _workerFetch(url, init = {}) {
   return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open(init.method || 'GET', url, true);
+    const id = Math.random().toString(36).slice(2, 12);
+    const timer = setTimeout(() => {
+      delete _workerPending[id];
+      reject(new TypeError('Request timed out'));
+    }, 15000);
+    _workerPending[id] = {
+      resolve: v => { clearTimeout(timer); resolve(v); },
+      reject: e => { clearTimeout(timer); reject(e); }
+    };
+    if (init.signal) {
+      init.signal.addEventListener('abort', () => {
+        if (_workerPending[id]) { delete _workerPending[id]; clearTimeout(timer); reject(new DOMException('Aborted', 'AbortError')); }
+      });
+    }
     const rawH = init.headers || {};
     const headers = typeof rawH.entries === 'function' ? Object.fromEntries(rawH.entries()) : rawH;
-    Object.entries(headers).forEach(([k, v]) => { try { xhr.setRequestHeader(k, String(v)); } catch(_) {} });
-    xhr.timeout = 12000;
-    xhr.onload = () => {
-      const hdrMap = {};
-      xhr.getAllResponseHeaders().trim().split(/[\r\n]+/).forEach(line => {
-        const i = line.indexOf(': ');
-        if (i > 0) hdrMap[line.slice(0, i).toLowerCase()] = line.slice(i + 2);
-      });
-      const fakeHeaders = { get: k => hdrMap[k.toLowerCase()] ?? null, has: k => k.toLowerCase() in hdrMap };
-      const body = xhr.responseText;
-      resolve({
-        ok: xhr.status >= 200 && xhr.status < 300,
-        status: xhr.status, statusText: xhr.statusText,
-        headers: fakeHeaders,
-        json: () => { try { return Promise.resolve(JSON.parse(body)); } catch(e) { return Promise.reject(e); } },
-        text: () => Promise.resolve(body),
-        clone() { return this; },
-      });
-    };
-    xhr.onerror = () => reject(new TypeError('Network error'));
-    xhr.ontimeout = () => reject(new TypeError('Request timed out'));
-    if (init.signal) init.signal.addEventListener('abort', () => { xhr.abort(); reject(new DOMException('Aborted', 'AbortError')); });
-    xhr.send(init.body ?? null);
+    _fetchWorker.postMessage({id, url, method: init.method || 'GET', headers, body: init.body ?? null});
   });
 }
 
-// Vercel 프록시(도메인 차단 우회) + XHR(fetch 오버라이드 우회) 조합
+// Vercel 프록시(도메인 차단 우회) + Worker fetch(확장프로그램 패치 우회) 조합
 const _useProxy = window.location.protocol === 'https:' &&
                   !window.location.hostname.endsWith('.github.io');
 function _supaFetch(url, init = {}) {
   const u = (_useProxy && url.startsWith(SUPA_URL + '/rest/'))
     ? '/api/supa' + url.slice(SUPA_URL.length)
     : url;
-  return _xhrFetch(u, init);
+  return _workerFetch(u, init);
 }
 
 const db = supabase.createClient(SUPA_URL, SUPA_KEY, {
