@@ -3943,8 +3943,8 @@ async function softRefresh() {
         startDate: r.start_date || null, endDate: r.end_date || null, piId: r.pi_id || null,
       }));
 
-    S.participation = {};
     if (partRes.data?.length > 0) {
+      S.participation = {};
       for (const r of partRes.data) {
         const yr = r.year ?? S.year;
         if (!S.participation[yr]) S.participation[yr] = {};
@@ -3955,8 +3955,8 @@ async function softRefresh() {
       }
     }
 
-    S.salary = {};
     if (salRes.data?.length > 0) {
+      S.salary = {};
       for (const r of salRes.data) {
         const yr = r.year ?? S.year;
         if (!S.salary[yr]) S.salary[yr] = {};
@@ -4026,7 +4026,7 @@ async function loadFromDB() {
   }
 
   // ② DB에서 최신 데이터 백그라운드 동기화
-  const _loadTimeout = setTimeout(() => { hideLoading(); _loadingInProgress = false; }, 15000);
+  const _loadTimeout = setTimeout(() => { hideLoading(); _loadingInProgress = false; setDbStatus('error'); toast('⚠ DB 응답 없음 — 네트워크를 확인해주세요', 4000); }, 15000);
   try {
     const [empRes, projRes, partRes, salRes] = await Promise.all([
       db.from('employees').select('*'),
@@ -4064,8 +4064,8 @@ async function loadFromDB() {
     }
 
     // 참여율 — 연도별
-    S.participation = {};
     if (partRes.data && partRes.data.length > 0) {
+      S.participation = {};
       for (const r of partRes.data) {
         const yr = r.year ?? S.year;
         if (!S.participation[yr]) S.participation[yr] = {};
@@ -4077,8 +4077,8 @@ async function loadFromDB() {
     }
 
     // 급여 — 연도별
-    S.salary = {};
     if (salRes.data && salRes.data.length > 0) {
+      S.salary = {};
       for (const r of salRes.data) {
         const yr = r.year ?? S.year;
         if (!S.salary[yr]) S.salary[yr] = {};
