@@ -769,14 +769,9 @@ function _workerFetch(url, init = {}) {
   });
 }
 
-// Vercel 프록시(도메인 차단 우회) + Worker fetch(확장프로그램 패치 우회) 조합
-const _useProxy = window.location.protocol === 'https:' &&
-                  !window.location.hostname.endsWith('.github.io');
+// Worker fetch: content script가 패치한 window.fetch와 무관하게 self.fetch(네이티브) 사용
 function _supaFetch(url, init = {}) {
-  const u = (_useProxy && url.startsWith(SUPA_URL + '/rest/'))
-    ? window.location.origin + '/api/supa' + url.slice(SUPA_URL.length)
-    : url;
-  return _workerFetch(u, init);
+  return _workerFetch(url, init);
 }
 
 const db = supabase.createClient(SUPA_URL, SUPA_KEY, {
