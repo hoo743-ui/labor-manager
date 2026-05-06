@@ -790,7 +790,7 @@ const _useProxy = window.location.protocol === 'https:' &&
                   !window.location.hostname.endsWith('.github.io');
 function _supaFetch(url, init = {}) {
   const u = (_useProxy && url.startsWith(SUPA_URL + '/rest/'))
-    ? '/api/supa' + url.slice(SUPA_URL.length)
+    ? window.location.origin + '/api/supa' + url.slice(SUPA_URL.length)
     : url;
   return _workerFetch(u, init);
 }
