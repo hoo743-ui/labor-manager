@@ -3943,7 +3943,7 @@ async function softRefresh() {
 
     if (partRes.data?.length > 0) {
       for (const r of partRes.data) {
-        const yr = r.year || 2025;
+        const yr = r.year ?? S.year;
         if (!S.participation[yr]) S.participation[yr] = {};
         if (!S.participation[yr][r.emp_id]) S.participation[yr][r.emp_id] = {};
         if (!S.participation[yr][r.emp_id][r.proj_id])
@@ -3954,7 +3954,7 @@ async function softRefresh() {
 
     if (salRes.data?.length > 0) {
       for (const r of salRes.data) {
-        const yr = r.year || 2025;
+        const yr = r.year ?? S.year;
         if (!S.salary[yr]) S.salary[yr] = {};
         if (!S.salary[yr][r.emp_id]) S.salary[yr][r.emp_id] = Array(12).fill(null);
         S.salary[yr][r.emp_id][r.month] = r.amount;
@@ -4061,7 +4061,7 @@ async function loadFromDB() {
     S.participation = {};
     if (partRes.data && partRes.data.length > 0) {
       for (const r of partRes.data) {
-        const yr = r.year || 2025;
+        const yr = r.year ?? S.year;
         if (!S.participation[yr]) S.participation[yr] = {};
         if (!S.participation[yr][r.emp_id]) S.participation[yr][r.emp_id] = {};
         if (!S.participation[yr][r.emp_id][r.proj_id])
@@ -4074,7 +4074,7 @@ async function loadFromDB() {
     S.salary = {};
     if (salRes.data && salRes.data.length > 0) {
       for (const r of salRes.data) {
-        const yr = r.year || 2025;
+        const yr = r.year ?? S.year;
         if (!S.salary[yr]) S.salary[yr] = {};
         if (!S.salary[yr][r.emp_id]) S.salary[yr][r.emp_id] = Array(12).fill(null);
         S.salary[yr][r.emp_id][r.month] = r.amount;
@@ -4139,6 +4139,7 @@ async function saveToDB() {
         category: p.category || '',
         start_date: p.startDate || null,
         end_date: p.endDate || null,
+        pi_id: p.piId || null,
       })), { onConflict: 'id' }
     );
 
@@ -4341,7 +4342,7 @@ function subscribeRealtime() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'participation' }, payload => {
       const r = payload.new;
       if (!r?.emp_id || !r?.proj_id) return;
-      const yr = r.year || 2025;
+      const yr = r.year ?? S.year;
       if (!S.participation[yr]) S.participation[yr] = {};
       if (!S.participation[yr][r.emp_id]) S.participation[yr][r.emp_id] = {};
       if (!S.participation[yr][r.emp_id][r.proj_id])
