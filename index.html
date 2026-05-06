@@ -724,23 +724,7 @@ const TAB_ID = sessionStorage.getItem('tab-id') || (() => {
 
 // Web Worker fetch: content script는 Worker 컨텍스트에 주입되지 않으므로
 // Worker 내부의 fetch는 확장프로그램에 패치되지 않은 네이티브 fetch를 사용함
-const _workerCode = `
-self.onmessage = async function(e) {
-  const {id, url, method, headers, body} = e.data;
-  try {
-    const opts = {method: method || 'GET', headers: headers || {}};
-    if (body != null) opts.body = body;
-    const res = await fetch(url, opts);
-    const text = await res.text();
-    const hdrs = {};
-    res.headers.forEach((v, k) => { hdrs[k] = v; });
-    self.postMessage({id, ok: res.ok, status: res.status, statusText: res.statusText, headers: hdrs, body: text});
-  } catch(err) {
-    self.postMessage({id, error: err.message || String(err)});
-  }
-};
-`;
-const _fetchWorker = new Worker(URL.createObjectURL(new Blob([_workerCode], {type: 'text/javascript'})));
+const _fetchWorker = new Worker(window.location.origin + '/fetch-worker.js');
 const _workerPending = Object.create(null);
 _fetchWorker.onmessage = function(e) {
   const {id, ok, status, statusText, headers: hdrs, body, error} = e.data;
